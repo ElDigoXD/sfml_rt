@@ -85,7 +85,7 @@ inline Vec3 unit_vector(Vec3 v) { return v / v.length(); }
 using Color = Vec3;
 using Point3 = Vec3;
 
-#ifdef SFML
+#ifdef IS_SFML
 
 #include <SFML/Graphics.hpp>
 
