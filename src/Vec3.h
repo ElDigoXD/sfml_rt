@@ -90,8 +90,7 @@ inline Vec3 Vec3::unit() { return unit_vector(*this); }
 using Color = Vec3;
 using Point3 = Vec3;
 
-//#ifdef IS_SFML
-#if 1
+#ifdef IS_SFML
 #include <SFML/Graphics.hpp>
 
 sf::Color to_sf_color(Color color) {
