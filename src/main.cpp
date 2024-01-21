@@ -6,6 +6,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "Vec3.h"
+#include "Camera.h"
 
 
 void a(sf::Image &image, unsigned int window_width, unsigned int window_height) {
@@ -27,8 +28,10 @@ int main() {
     auto image_width = 600u;
     auto image_height = 400u;
 
+    auto camera = Camera();
+
     auto window = sf::RenderWindow{{current_width, current_height}, "CMake SFML Project"};
-    window.setFramerateLimit(60);
+    window.setFramerateLimit(165);
     ImGui::SFML::Init(window);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
@@ -43,6 +46,11 @@ int main() {
 
     a(image, image_width, image_height);
     texture.update(pixels);
+
+    int render_time;
+    sf::Clock render_clock;
+    camera.render(image);
+    render_time = render_clock.getElapsedTime().asMilliseconds();
     texture.update(image);
 
 
@@ -67,16 +75,20 @@ int main() {
                                                       static_cast<float>(current_height))));
                 if (current_width <= max_window_width && current_height <= max_window_height) {
                     a(image, image_width, image_height);
+                    render_clock.restart();
+                    camera.update(static_cast<int>(image_width), static_cast<int>(image_height));
+                    camera.render(image);
+                    render_time = render_clock.getElapsedTime().asMilliseconds();
                 } else {
                     a(image, max_window_width, max_window_height);
-
                 }
                 texture.update(image);
                 //image.saveToFile("out.png");
             }
         }
 
-        ImGui::SFML::Update(window, delta_clock.restart());
+        const sf::Time &dt = delta_clock.restart();
+        ImGui::SFML::Update(window, dt);
         ImGuiWindowFlags window_flags = 0;
         window_flags |= ImGuiWindowFlags_NoMove;
         window_flags |= ImGuiWindowFlags_NoResize;
@@ -91,7 +103,8 @@ int main() {
             image.saveToFile("image.png");
             // Todo: Trim image
         }
-        ImGui::Text("%dx%d", image_width, image_height);
+        ImGui::Text("%dx%d (%.2f)", image_width, image_height,  1/dt.asSeconds());
+        ImGui::Text("Render: %dms", render_time);
         ImGui::End();
 
         window.clear();

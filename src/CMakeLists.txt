@@ -1,6 +1,8 @@
 add_executable(sfml_rt_exe
     main.cpp
     Vec3.h
+        Ray.h
+        Camera.h
 )
 target_link_libraries(sfml_rt_exe
     PRIVATE

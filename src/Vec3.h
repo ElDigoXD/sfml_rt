@@ -54,6 +54,9 @@ public:
     [[nodiscard]] double length_squared() const {
         return x * x + y * y + z * z;
     }
+
+
+    Vec3 unit();
 };
 
 
@@ -80,13 +83,15 @@ inline Vec3 cross(const Vec3 &a, const Vec3 &b) {
 
 inline Vec3 unit_vector(Vec3 v) { return v / v.length(); }
 
+inline Vec3 Vec3::unit() { return unit_vector(*this); }
+
 //
 
 using Color = Vec3;
 using Point3 = Vec3;
 
-#ifdef IS_SFML
-
+//#ifdef IS_SFML
+#if 1
 #include <SFML/Graphics.hpp>
 
 sf::Color to_sf_color(Color color) {
