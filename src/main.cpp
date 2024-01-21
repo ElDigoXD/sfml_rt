@@ -1,5 +1,3 @@
-#define IS_SFML
-
 #include "imgui.h"
 #include "imgui-SFML.h"
 
@@ -32,7 +30,7 @@ int main() {
 
     auto window = sf::RenderWindow{{current_width, current_height}, "CMake SFML Project"};
     window.setFramerateLimit(165);
-    ImGui::SFML::Init(window);
+    auto _ = ImGui::SFML::Init(window);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     sf::Texture texture;

@@ -90,7 +90,9 @@ inline Vec3 Vec3::unit() { return unit_vector(*this); }
 using Color = Vec3;
 using Point3 = Vec3;
 
+
 #ifdef IS_SFML
+
 #include <SFML/Graphics.hpp>
 
 sf::Color to_sf_color(Color color) {
@@ -99,5 +101,15 @@ sf::Color to_sf_color(Color color) {
             static_cast<sf::Uint8>(color.b * 255),
             255};
 }
+
+namespace Colors{
+static Color red = Color(1, 0, 0);
+static Color green = Color(0, 1, 0);
+static Color blue = Color(0, 0, 1);
+static Color white = Color(1, 1, 1);
+static Color black = Color(0, 0, 0);
+static Color blue_sky = Color(0.5, 0.7, 1);
+}
+
 
 #endif

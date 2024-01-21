@@ -1,0 +1,26 @@
+#pragma once
+
+#include "utils.h"
+
+class Interval {
+public:
+    double min, max;
+
+    Interval() : min(+infinity), max(-infinity) {}
+
+    Interval(double _min, double _max) : min(_min), max(_max) {}
+
+    [[nodiscard]] inline bool contains(double x) const {
+        return min <= x && x <= max;
+    }
+
+    [[nodiscard]] inline bool surrounds(double x) const {
+        return min < x && x < max;
+    }
+
+    static const Interval empty, universe;
+
+};
+
+static const Interval empty = Interval(+infinity, -infinity);
+static const Interval all = Interval(+infinity, -infinity);

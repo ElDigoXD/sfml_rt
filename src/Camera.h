@@ -2,6 +2,7 @@
 
 #include "Vec3.h"
 #include "Ray.h"
+#include "Sphere.h"
 #include <iostream>
 
 class Camera {
@@ -25,11 +26,17 @@ private:
 
     Point3 pixel_00_location;
 
+    HittableList world;
+
 public:
     Camera() {
         image_width = 600;
         image_height = 400;
         update(image_width, image_height);
+
+        world.add(std::make_shared<Sphere>(Sphere({0, 0, -1}, 0.5)));
+        world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100));
+
     }
 
     void update(int width, int height) {
@@ -53,13 +60,6 @@ public:
         pixel_00_location = viewport_upper_left + 0.5 * (pixel_delta_x + pixel_delta_y);
     }
 
-    static bool hit_sphere(const Point3 &center, double radious, const Ray ray) {
-        Vec3 oc = ray.origin() - center;
-        auto a = dot(ray.direction(), ray.direction());
-        auto b = 2.0 * dot(oc, ray.direction());
-        auto c = dot(oc, oc) - radious * radious;
-        return (b * b - 4 * a * c) >= 0;
-    }
 
 #ifdef IS_SFML
 
@@ -72,7 +72,7 @@ public:
                 auto ray_direction = pixel_center - camera_center;
                 Ray r = Ray(camera_center, ray_direction);
 
-                Color pixel_color = ray_color(r);
+                Color pixel_color = ray_color(r, world);
                 image.setPixel(i, j, to_sf_color(pixel_color));
             }
         }
@@ -96,17 +96,21 @@ public:
     }
 #endif
 
+
     static Color lerp(Color start, Color end, double a) {
         return (1 - a) * start + a * end;
     }
 
-    static Color ray_color(Ray &ray) {
-        if (hit_sphere(Point3(0, 0, -1), 0.5, ray)) {
-            return {1, 0, 0};
+    constexpr static const double infinity = std::numeric_limits<double>::infinity();
+
+    static Color ray_color(Ray &ray, const Hittable &world) {
+        HitRecord record;
+        if (world.hit(ray, Interval(0, infinity), record)) {
+            return 0.5 * (record.normal + Color(1, 1, 1));
         }
 
         Vec3 unit_direction = ray.direction().unit();
         auto a = 0.5 * (unit_direction.y + 1.0);
-        return lerp(Color(1, 1, 1), Color(0.5, 0.7, 1), a);
+        return lerp(Colors::white, Colors::blue_sky, a);
     }
 };

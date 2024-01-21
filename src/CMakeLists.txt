@@ -3,6 +3,10 @@ add_executable(sfml_rt_exe
         Vec3.h
         Ray.h
         Camera.h
+        Hittable.h
+        Sphere.h
+        Interval.h
+        utils.h
 )
 target_compile_definitions(sfml_rt_exe PRIVATE IS_SFML)
 
