@@ -27,6 +27,9 @@ int main() {
     auto image_height = 400u;
 
     auto camera = Camera();
+    HittableList world;
+    world.add(std::make_shared<Sphere>(Sphere({0, 0, -1}, 0.5)));
+    world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100));
 
     auto window = sf::RenderWindow{{current_width, current_height}, "CMake SFML Project"};
     window.setFramerateLimit(165);
@@ -47,7 +50,7 @@ int main() {
 
     int render_time;
     sf::Clock render_clock;
-    camera.render(image);
+    camera.render(image, world);
     render_time = render_clock.getElapsedTime().asMilliseconds();
     texture.update(image);
 
@@ -75,7 +78,7 @@ int main() {
                     a(image, image_width, image_height);
                     render_clock.restart();
                     camera.update(static_cast<int>(image_width), static_cast<int>(image_height));
-                    camera.render(image);
+                    camera.render(image, world);
                     render_time = render_clock.getElapsedTime().asMilliseconds();
                 } else {
                     a(image, max_window_width, max_window_height);

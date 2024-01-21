@@ -26,17 +26,12 @@ private:
 
     Point3 pixel_00_location;
 
-    HittableList world;
 
 public:
     Camera() {
         image_width = 600;
         image_height = 400;
         update(image_width, image_height);
-
-        world.add(std::make_shared<Sphere>(Sphere({0, 0, -1}, 0.5)));
-        world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100));
-
     }
 
     void update(int width, int height) {
@@ -65,7 +60,7 @@ public:
 
 #include "SFML/Graphics/Image.hpp"
 
-    void render(sf::Image &image) {
+    void render(sf::Image &image, const HittableList& world) {
         for (int j = 0; j < image_height; ++j) {
             for (int i = 0; i < image_width; ++i) {
                 Point3 pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
