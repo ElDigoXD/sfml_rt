@@ -4,12 +4,18 @@
 #include "Ray.h"
 #include "Sphere.h"
 #include <iostream>
+#include <random>
+#include <cstring>
+#include "SFML/Graphics/Image.hpp"
 
 class Camera {
-private:
+public:
     double aspect_ratio{};
     int image_width{};
     int image_height{};
+
+    int samples_per_pixel = 10;
+private:
 
     double focal_length{};
     double viewport_width{};
@@ -25,7 +31,6 @@ private:
     Vec3 viewport_upper_left;
 
     Point3 pixel_00_location;
-
 
 public:
     Camera() {
@@ -55,41 +60,57 @@ public:
         pixel_00_location = viewport_upper_left + 0.5 * (pixel_delta_x + pixel_delta_y);
     }
 
+    Ray get_random_ray_at(int i, int j) {
+        auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
+        auto pixel_sample = pixel_center + pixel_sample_square();
 
-#ifdef IS_SFML
+        return Ray(camera_center, pixel_sample - camera_center);
+
+    }
+
+    [[nodiscard]] Vec3 pixel_sample_square() const {
+        return (-0.5 + Random::generate_canonical()) * pixel_delta_x +
+               (-0.5 + Random::generate_canonical()) * pixel_delta_y;
+    }
+
 
 #include "SFML/Graphics/Image.hpp"
 
-    void render(sf::Image &image, const HittableList& world) {
+    void render(sf::Image &image, const HittableList &world) {
         for (int j = 0; j < image_height; ++j) {
             for (int i = 0; i < image_width; ++i) {
-                Point3 pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
-                auto ray_direction = pixel_center - camera_center;
-                Ray r = Ray(camera_center, ray_direction);
+                Color pixel_color = Colors::black;
+                for (int sample = 0; sample < samples_per_pixel; ++sample) {
+                    Ray ray = get_random_ray_at(i, j);
+                    pixel_color += ray_color(ray, world);
+                }
+                pixel_color /= samples_per_pixel;
 
-                Color pixel_color = ray_color(r, world);
+
                 image.setPixel(i, j, to_sf_color(pixel_color));
             }
         }
     }
 
-#endif
-#ifdef PROFILE
-    volatile int a = 0;
-
-    void render() {
+    void render2(unsigned int pixels[], const HittableList &world) {
         for (int j = 0; j < image_height; ++j) {
-            for (int i = 0; i < image_width; ++i) {
-                Point3 pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
-                auto ray_direction = pixel_center - camera_center;
-                Ray r = Ray(camera_center, ray_direction);
-
-                Color pixel_color = ray_color(r);
-                a = pixel_color.r;
-            }
+            render_pixel_line(&pixels[j * image_width], world, j);
         }
     }
-#endif
+
+    inline void render_pixel_line(unsigned int pixels[], const HittableList &world, int line) {
+        for (int i = 0; i < image_width; ++i) {
+            Color pixel_color = Colors::black;
+            for (int sample = 0; sample < samples_per_pixel; ++sample) {
+                Ray ray = get_random_ray_at(i, line);
+                pixel_color += ray_color(ray, world);
+            }
+            pixel_color /= samples_per_pixel;
+
+            auto sf_color = to_sf_color(pixel_color);
+            std::memcpy(&pixels[i], &sf_color, 4);
+        }
+    }
 
 
     static Color lerp(Color start, Color end, double a) {
