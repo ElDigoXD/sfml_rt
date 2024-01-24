@@ -3,6 +3,7 @@
 #include "Vec3.h"
 #include "Ray.h"
 #include "Sphere.h"
+#include "Material.h"
 #include <iostream>
 #include <random>
 #include <cstring>
@@ -102,7 +103,7 @@ public:
 
     inline void render_pixel_line(unsigned int pixels[], const HittableList &world, int line) {
         for (int i = 0; i < image_width; ++i) {
-            Color pixel_color = Color(0,0,0);
+            Color pixel_color = Color(0, 0, 0);
             for (int sample = 0; sample < samples_per_pixel; ++sample) {
                 Ray ray = get_random_ray_at(i, line);
                 pixel_color += ray_color(ray, max_depth, world);
@@ -128,10 +129,12 @@ public:
             return (Colors::black);
 
         if (world.hit(ray, Interval(0.001, infinity), record)) {
-            Vec3 diffusion_direction = random_on_hemisphere(record.normal);
-            Vec3 lambertian_direction = record.normal + random_unit_vector();
-
-            return reflectance * ray_color(Ray(record.p, lambertian_direction), depth - 1, world);
+            Ray scattered_ray;
+            Color attenuation;
+            if (record.material->scatter(ray, record, attenuation, scattered_ray)) {
+                return attenuation * ray_color(scattered_ray, depth - 1, world);
+            };
+            return Colors::black;
 
             // Show normal vectors, maybe a toggle
             // return 0.5 * (record.normal + Color(1, 1, 1));

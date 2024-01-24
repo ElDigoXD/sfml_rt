@@ -56,6 +56,11 @@ public:
         return x * x + y * y + z * z;
     }
 
+    bool is_near_zero() const {
+        auto s = 1e-8;
+        return (fabs(x) < s) && (fabs(y) < s) && (fabs(z) < s);
+    }
+
     inline static Vec3 random() { return {Random::_double(), Random::_double(), Random::_double()}; }
 
     inline static Vec3 random(double min, double max) {
@@ -106,6 +111,10 @@ inline Vec3 random_unit_vector() { return random_in_unit_sphere().normalize(); }
 inline Vec3 random_on_hemisphere(const Vec3 &normal) {
     Vec3 vec = random_unit_vector();
     return dot(vec, normal) > 0.0 ? vec : -vec;
+}
+
+inline const Vec3 reflect(const Vec3 &v, const Vec3 &n) {
+    return v - 2 * dot(v, n) * n;
 }
 
 //

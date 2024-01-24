@@ -6,10 +6,13 @@
 #include "vector"
 #include "Interval.h"
 
+class Material;
+
 class HitRecord {
 public:
     Point3 p;
     Vec3 normal;
+    std::shared_ptr<Material> material;
     double t{};
     bool front_face{};
 

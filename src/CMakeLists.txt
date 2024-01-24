@@ -7,6 +7,7 @@ add_executable(sfml_rt_exe #WIN32
         Sphere.h
         Interval.h
         utils.h
+        Material.h
 )
 target_compile_definitions(sfml_rt_exe PRIVATE IS_SFML)
 
@@ -19,6 +20,7 @@ add_executable(sfml_rt_profiler_exe #WIN32
         Sphere.h
         Interval.h
         utils.h
+        Material.h
 )
 target_compile_definitions(sfml_rt_profiler_exe PRIVATE PROFILE)
 
