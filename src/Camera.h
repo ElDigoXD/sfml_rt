@@ -7,18 +7,17 @@
 #include <iostream>
 #include <random>
 #include <cstring>
-#include "SFML/Graphics/Image.hpp"
 
 class Camera {
 public:
-    double aspect_ratio{};
-    int image_width{};
-    int image_height{};
+    int image_width;
+    int image_height;
+    int samples_per_pixel;
 
-    int samples_per_pixel = 10;
-    int max_depth = 10;
-    float reflectance = 0.5;
+    int max_depth;
+    float reflectance{};
 private:
+    double aspect_ratio{};
 
     double focal_length{};
     double viewport_width{};
@@ -35,10 +34,17 @@ private:
 
     Point3 pixel_00_location;
 
+
 public:
-    Camera() {
-        image_width = 600;
-        image_height = 400;
+    Camera() : Camera(600, 400) {}
+
+    Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 100) {}
+
+    Camera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
+            : image_width(_image_width),
+              image_height(_image_height),
+              samples_per_pixel(_samples_per_pixel),
+              max_depth(_max_depth) {
         update(image_width, image_height);
     }
 
@@ -77,31 +83,13 @@ public:
     }
 
 
-#include "SFML/Graphics/Image.hpp"
-
-    void render(sf::Image &image, const HittableList &world) {
+    void render(unsigned char pixels[], const HittableList &world) {
         for (int j = 0; j < image_height; ++j) {
-            for (int i = 0; i < image_width; ++i) {
-                Color pixel_color = Colors::black;
-                for (int sample = 0; sample < samples_per_pixel; ++sample) {
-                    Ray ray = get_random_ray_at(i, j);
-                    pixel_color += ray_color(ray, max_depth, world);
-                }
-                pixel_color /= samples_per_pixel;
-
-
-                image.setPixel(i, j, to_sf_color(pixel_color));
-            }
+            render_pixel_line(&pixels[j * image_width * 4], world, j);
         }
     }
 
-    void render2(unsigned int pixels[], const HittableList &world) {
-        for (int j = 0; j < image_height; ++j) {
-            render_pixel_line(&pixels[j * image_width], world, j);
-        }
-    }
-
-    inline void render_pixel_line(unsigned int pixels[], const HittableList &world, int line) {
+    void render_pixel_line(unsigned char pixels[], const HittableList &world, int line) {
         for (int i = 0; i < image_width; ++i) {
             Color pixel_color = Color(0, 0, 0);
             for (int sample = 0; sample < samples_per_pixel; ++sample) {
@@ -110,8 +98,11 @@ public:
             }
             pixel_color /= samples_per_pixel;
 
-            auto sf_color = to_sf_gamma_color(pixel_color);
-            std::memcpy(&pixels[i], &sf_color, 4);
+            auto rgba_color = to_gamma_color(pixel_color);
+            pixels[i*4 + 0] = static_cast<char>(rgba_color.r * 255);
+            pixels[i*4 + 1] = static_cast<char>(rgba_color.g * 255);
+            pixels[i*4 + 2] = static_cast<char>(rgba_color.b * 255);
+            pixels[i*4 + 3] = 255;
         }
     }
 

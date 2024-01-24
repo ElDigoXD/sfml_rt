@@ -56,48 +56,47 @@ public:
         return x * x + y * y + z * z;
     }
 
-    bool is_near_zero() const {
-        auto s = 1e-8;
-        return (fabs(x) < s) && (fabs(y) < s) && (fabs(z) < s);
+    [[nodiscard]] bool is_near_zero() const {
+        return (fabs(x) < 1e-8) && (fabs(y) < 1e-8) && (fabs(z) < 1e-8);
     }
 
-    inline static Vec3 random() { return {Random::_double(), Random::_double(), Random::_double()}; }
+    static Vec3 random() { return {Random::_double(), Random::_double(), Random::_double()}; }
 
-    inline static Vec3 random(double min, double max) {
+    static Vec3 random(double min, double max) {
         return {Random::_double(min, max), Random::_double(min, max), Random::_double(min, max)};
     }
 
 
-    inline Vec3 normalize();
+    Vec3 normalize();
 };
 
 
 // Utility
-inline Vec3 operator+(const Vec3 &a, const Vec3 &b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
+Vec3 operator+(const Vec3 &a, const Vec3 &b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
 
-inline Vec3 operator-(const Vec3 &a, const Vec3 &b) { return {a.x - b.x, a.y - b.y, a.z - b.z}; }
+Vec3 operator-(const Vec3 &a, const Vec3 &b) { return {a.x - b.x, a.y - b.y, a.z - b.z}; }
 
-inline Vec3 operator*(const Vec3 &a, const Vec3 &b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
+Vec3 operator*(const Vec3 &a, const Vec3 &b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
 
-inline Vec3 operator*(const Vec3 &a, double t) { return {a.x * t, a.y * t, a.z * t}; }
+Vec3 operator*(const Vec3 &a, double t) { return {a.x * t, a.y * t, a.z * t}; }
 
-inline Vec3 operator*(double t, const Vec3 &a) { return a * t; }
+Vec3 operator*(double t, const Vec3 &a) { return a * t; }
 
-inline Vec3 operator/(const Vec3 &a, double t) { return (1 / t) * a; }
+Vec3 operator/(const Vec3 &a, double t) { return (1 / t) * a; }
 
-inline double dot(const Vec3 &a, const Vec3 &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+double dot(const Vec3 &a, const Vec3 &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
-inline Vec3 cross(const Vec3 &a, const Vec3 &b) {
+Vec3 cross(const Vec3 &a, const Vec3 &b) {
     return {a.y * b.z - a.z * b.y,
             a.z * b.x - a.x * b.z,
             a.x * b.y - a.y * b.x};
 }
 
-inline Vec3 unit_vector(Vec3 v) { return v / v.length(); }
+Vec3 unit_vector(Vec3 v) { return v / v.length(); }
 
-inline Vec3 Vec3::normalize() { return unit_vector(*this); }
+Vec3 Vec3::normalize() { return unit_vector(*this); }
 
-inline Vec3 random_in_unit_sphere() {
+Vec3 random_in_unit_sphere() {
     while (true) {
         auto p = Vec3::random(-1, 1);
         if (p.length_squared() < 1) {
@@ -106,24 +105,37 @@ inline Vec3 random_in_unit_sphere() {
     }
 }
 
-inline Vec3 random_unit_vector() { return random_in_unit_sphere().normalize(); }
+Vec3 random_unit_vector() { return random_in_unit_sphere().normalize(); }
 
-inline Vec3 random_on_hemisphere(const Vec3 &normal) {
+Vec3 random_on_hemisphere(const Vec3 &normal) {
     Vec3 vec = random_unit_vector();
     return dot(vec, normal) > 0.0 ? vec : -vec;
 }
 
-inline const Vec3 reflect(const Vec3 &v, const Vec3 &n) {
+Vec3 reflect(const Vec3 &v, const Vec3 &n) {
     return v - 2 * dot(v, n) * n;
 }
 
 //
 
+class Color__ {
+public:
+    union {
+        struct {
+            double r;
+            double g;
+            double b;
+            double a;
+        };
+        double e[3]{0, 0, 0};
+    };
+};
+
 using Color = Vec3;
 using Point3 = Vec3;
 
 
-//#ifdef IS_SFML
+#ifdef IS_SFML
 
 #include <SFML/Graphics.hpp>
 
@@ -140,7 +152,13 @@ sf::Color to_sf_gamma_color(Color color) {
             static_cast<sf::Uint8>( std::sqrt(color.b) * 255),
             255};
 }
-//#endif
+#endif
+
+Color to_gamma_color(Color color) {
+    return {std::sqrt(color.r),
+            std::sqrt(color.g),
+            std::sqrt(color.b)};
+}
 
 namespace Colors {
     static Color red = Color(1, 0, 0);

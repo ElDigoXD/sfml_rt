@@ -1,9 +1,10 @@
 #include "imgui.h"
 #include "imgui-SFML.h"
-
+#include "third-party/BS_thread_pool.h"
 #include <SFML/Graphics.hpp>
 #include <thread>
 
+#include "utils.h"
 #include "Vec3.h"
 #include "Camera.h"
 #include "Material.h"
@@ -23,22 +24,19 @@ public:
     Camera camera = Camera();
     HittableList world;
     sf::Texture texture;
-    unsigned int *pixels = new unsigned int[max_window_width * max_window_height];
+    unsigned char *pixels = new unsigned char[max_window_width * max_window_height * 4];
 
     enum TState : int {
         IDLE = -1,
         RENDERING = 0,
-        DONE = 1,
     };
 
-    unsigned int t_n = std::thread::hardware_concurrency();
-    volatile TState t_state = IDLE;
-    volatile TState *ts_state = new TState[t_n];
-    std::jthread t;
-    std::jthread *ts = new std::jthread[t_n];
+    unsigned int t_n;
+    TState t_state = IDLE;
+    BS::thread_pool pool{1};
 
     int render_time = 0;
-    int render_update_ms = 100;
+    int render_update_ms;
 
     sf::Clock update_texture_clock;
     sf::Clock delta_clock;
@@ -46,7 +44,22 @@ public:
 
 
     GUI() {
+        // Imgui variables
+        render_update_ms = 1;
+        t_n = 4;
+        pool.reset(t_n);
+        camera.samples_per_pixel = 100;
+        camera.max_depth = 100;
 
+        auto material_ground = std::make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
+        auto material_center = std::make_shared<Lambertian>(Color(0.7, 0.3, 0.3));
+        auto material_left = std::make_shared<Metal>(Color(0.8, 0.8, 0.8), 0);
+        auto material_right = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 1);
+
+        world.add(std::make_shared<Sphere>(Point3(0.0, -100.5, -1.0), 100.0, material_ground));
+        world.add(std::make_shared<Sphere>(Point3(0.0, 0.0, -1.0), 0.5, material_center));
+        world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), 0.5, material_left));
+        world.add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, material_right));
     }
 
     void run() {
@@ -65,16 +78,7 @@ public:
         //                                   std::make_shared<Lambertian>(Colors::white/2)));
         // new
 
-        auto material_ground = std::make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
-        auto material_center = std::make_shared<Lambertian>(Color(0.7, 0.3, 0.3));
-        auto material_left   = std::make_shared<Metal>(Color(0.8, 0.8, 0.8), 0.3);
-        auto material_right  = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 1);
 
-        world.add(std::make_shared<Sphere>(Point3( 0.0, -100.5, -1.0), 100.0, material_ground));
-        world.add(std::make_shared<Sphere>(Point3( 0.0,    0.0, -1.0),   0.5, material_center));
-        world.add(std::make_shared<Sphere>(Point3(-1.0,    0.0, -1.0),   0.5, material_left));
-        world.add(std::make_shared<Sphere>(Point3( 1.0,    0.0, -1.0),   0.5, material_right));
-        t_n = 4;
 
         start_render();
 
@@ -101,26 +105,16 @@ public:
                 }
             }
 
-            // Render thread process
             if (t_state != IDLE) {
-                render_time = render_clock.getElapsedTime().asMilliseconds();
-                t_state = DONE;
-
-                for (int i = 0; i < t_n; ++i) {
-                    if (ts_state[i] == RENDERING) {
-                        t_state = RENDERING;
-                        break;
+                if (pool.get_tasks_total() > 0) {
+                    if (update_texture_clock.getElapsedTime().asMilliseconds() > render_update_ms) {
+                        update_texture_clock.restart();
+                        texture.update(pixels, image_width, image_height, 0, 0);
                     }
-                }
-
-                if (t_state == DONE || update_texture_clock.getElapsedTime().asMilliseconds() > render_update_ms) {
-                    if (t_state == DONE) {
-                        stop_render();
-
-                        printf("Rendered: %dx%d\tin %dms\n", image_height, image_width, render_time);
-                    }
-                    texture.update((unsigned char *) pixels, image_width, image_height, 0, 0);
-                    update_texture_clock.restart();
+                } else {
+                    t_state = IDLE;
+                    texture.update(pixels, image_width, image_height, 0, 0);
+                    render_time = render_clock.getElapsedTime().asMilliseconds();
                 }
             }
 
@@ -135,11 +129,7 @@ public:
     }
 
     void stop_render() {
-        for (int i = 0; i < t_n; ++i) {
-            ts[i].request_stop();
-            if (ts[i].joinable()) ts[i].join();
-        }
-        t_state = IDLE;
+        pool.purge();
     }
 
     void start_render() {
@@ -147,25 +137,13 @@ public:
 
         render_clock.restart();
         memset(pixels, 0, max_window_width * max_window_height * 4);
-        texture.update((unsigned char *) pixels, image_width, image_height, 0, 0);
-        auto length = image_height * 1.0 / t_n;
-        for (int i = 0; i < t_n; ++i) {
-            ts_state[i] = RENDERING;
-            ts[i] = std::jthread(&GUI::concurrent_renderer_thread, this, std::floor(i * length), length + 1, i);
-        }
+        texture.update(pixels, image_width, image_height, 0, 0);
+
+        pool.detach_loop(0U, image_height, [this](int j) {
+            camera.render_pixel_line(&pixels[j * camera.image_width * 4], world, (int) j);
+        }, 50);
         t_state = RENDERING;
     };
-
-    void concurrent_renderer_thread(const std::stop_token &stop, unsigned int offset, unsigned int length, int i) {
-        auto top = std::min(offset + length, image_height);
-        for (unsigned int j = offset; j < top && !stop.stop_requested(); ++j) {
-            camera.render_pixel_line(&pixels[j * camera.image_width], world, (int) j);
-        }
-        if (!stop.stop_requested()) {
-            ts_state[i] = DONE;
-        }
-    }
-
 
     void imgui() {
         const sf::Time &dt = delta_clock.restart();
@@ -194,29 +172,27 @@ public:
         ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
         ImGui::BeginDisabled(t_state == RENDERING);
         ImGui::Text("Render threads:");
-        ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency());
+        if (ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency()))
+            pool.reset(t_n);
         ImGui::EndDisabled();
         ImGui::Text("Samples per pixel:");
         ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
         ImGui::Text("Ray depth:");
         ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
-        ImGui::Text("Reflectance:");
-        ImGui::SliderFloat("##e", (float *) &camera.reflectance, 0, 1);
 
 
         ImGui::Text("%dx%d (%.2f) %d", image_width, image_height, 1 / dt.asSeconds(), t_state);
-        ImGui::Text("Render: %dms", render_time);
+        ImGui::Text("Render: %dms",
+                    t_state == RENDERING ? render_clock.getElapsedTime().asMilliseconds() : render_time);
         if (ImGui::Button("Save render", {-1, 0})) {
             sf::Image image;
-            image.create(image_width, image_height, (unsigned char *) pixels);
+            image.create(image_width, image_height, pixels);
             image.saveToFile("out.png");
         }
         ImGui::End();
-
     }
 
 };
-
 
 int main() {
     GUI gui;

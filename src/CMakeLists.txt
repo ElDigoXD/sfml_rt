@@ -8,6 +8,10 @@ add_executable(sfml_rt_exe #WIN32
         Interval.h
         utils.h
         Material.h
+        third-party/BS_thread_pool.h
+        third-party/pcg_random/pcg_random.hpp
+        third-party/pcg_random/pcg_extras.hpp
+        third-party/pcg_random/pcg_uint128.hpp
 )
 target_compile_definitions(sfml_rt_exe PRIVATE IS_SFML)
 
@@ -21,13 +25,18 @@ add_executable(sfml_rt_profiler_exe #WIN32
         Interval.h
         utils.h
         Material.h
+        third-party/BS_thread_pool.h
+        third-party/stb_image_write.h
+        third-party/pcg_random/pcg_random.hpp
+        third-party/pcg_random/pcg_extras.hpp
+        third-party/pcg_random/pcg_uint128.hpp
 )
 target_compile_definitions(sfml_rt_profiler_exe PRIVATE PROFILE)
 
-target_link_libraries(sfml_rt_profiler_exe
-    PRIVATE
-        ImGui-SFML::ImGui-SFML
-    )
+# target_link_libraries(sfml_rt_profiler_exe
+#         PRIVATE
+#         ImGui-SFML::ImGui-SFML
+# )
 
 target_link_libraries(sfml_rt_exe
         PRIVATE
@@ -35,7 +44,7 @@ target_link_libraries(sfml_rt_exe
 )
 
 
-if(WIN32)
+if (WIN32)
     if (BUILD_SHARED_LIBS)
         add_custom_command(TARGET sfml_rt_exe POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -51,5 +60,5 @@ if(WIN32)
                 $<TARGET_FILE:sfml-window>
                 $<TARGET_FILE:sfml-system>
                 $<TARGET_FILE_DIR:sfml_rt_profiler_exe>)
-    endif()
-endif()
+    endif ()
+endif ()
