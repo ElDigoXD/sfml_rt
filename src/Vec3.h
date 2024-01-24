@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include "utils.h"
 
 class Vec3 {
 public:
@@ -55,8 +56,14 @@ public:
         return x * x + y * y + z * z;
     }
 
+    inline static Vec3 random() { return {Random::_double(), Random::_double(), Random::_double()}; }
 
-    Vec3 unit();
+    inline static Vec3 random(double min, double max) {
+        return {Random::_double(min, max), Random::_double(min, max), Random::_double(min, max)};
+    }
+
+
+    inline Vec3 normalize();
 };
 
 
@@ -83,7 +90,23 @@ inline Vec3 cross(const Vec3 &a, const Vec3 &b) {
 
 inline Vec3 unit_vector(Vec3 v) { return v / v.length(); }
 
-inline Vec3 Vec3::unit() { return unit_vector(*this); }
+inline Vec3 Vec3::normalize() { return unit_vector(*this); }
+
+inline Vec3 random_in_unit_sphere() {
+    while (true) {
+        auto p = Vec3::random(-1, 1);
+        if (p.length_squared() < 1) {
+            return p;
+        }
+    }
+}
+
+inline Vec3 random_unit_vector() { return random_in_unit_sphere().normalize(); }
+
+inline Vec3 random_on_hemisphere(const Vec3 &normal) {
+    Vec3 vec = random_unit_vector();
+    return dot(vec, normal) > 0.0 ? vec : -vec;
+}
 
 //
 
@@ -101,15 +124,22 @@ sf::Color to_sf_color(Color color) {
             static_cast<sf::Uint8>(color.b * 255),
             255};
 }
+
+sf::Color to_sf_gamma_color(Color color) {
+    return {static_cast<sf::Uint8>(  std::sqrt(color.r) * 255),
+            static_cast<sf::Uint8>(std::sqrt(color.g) * 255),
+            static_cast<sf::Uint8>( std::sqrt(color.b) * 255),
+            255};
+}
 //#endif
 
-namespace Colors{
-static Color red = Color(1, 0, 0);
-static Color green = Color(0, 1, 0);
-static Color blue = Color(0, 0, 1);
-static Color white = Color(1, 1, 1);
-static Color black = Color(0, 0, 0);
-static Color blue_sky = Color(0.5, 0.7, 1);
+namespace Colors {
+    static Color red = Color(1, 0, 0);
+    static Color green = Color(0, 1, 0);
+    static Color blue = Color(0, 0, 1);
+    static Color white = Color(1, 1, 1);
+    static Color black = Color(0, 0, 0);
+    static Color blue_sky = Color(0.5, 0.7, 1);
 }
 
 

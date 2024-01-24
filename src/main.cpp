@@ -60,7 +60,7 @@ public:
         world.add(std::make_shared<Sphere>(Sphere({0, 0, -1}, 0.5)));
         world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100));
 
-        t_n = 1;
+        t_n = 4;
 
         start_render();
 
@@ -101,12 +101,8 @@ public:
 
                 if (t_state == DONE || update_texture_clock.getElapsedTime().asMilliseconds() > render_update_ms) {
                     if (t_state == DONE) {
-                        for (int i = 0; i < t_n; ++i) {
-                            if (ts[i].joinable()) {
-                                ts[i].join();
-                            }
-                        }
-                        t_state = IDLE;
+                        stop_render();
+
                         printf("Rendered: %dx%d\tin %dms\n", image_height, image_width, render_time);
                     }
                     texture.update((unsigned char *) pixels, image_width, image_height, 0, 0);
@@ -124,12 +120,16 @@ public:
         }
     }
 
-
-    void start_render() {
+    void stop_render() {
         for (int i = 0; i < t_n; ++i) {
             ts[i].request_stop();
             if (ts[i].joinable()) ts[i].join();
         }
+        t_state = IDLE;
+    }
+
+    void start_render() {
+        stop_render();
 
         render_clock.restart();
         memset(pixels, 0, max_window_width * max_window_height * 4);
@@ -167,15 +167,27 @@ public:
         ImGui::SetNextWindowBgAlpha(1);
         ImGui::Begin("Hello, world!", nullptr, window_flags);
         ImGui::PushItemWidth(-1.0f);
-        if (ImGui::Button("Re-render", {-1, 0})) {
-            start_render();
+        if (t_state == RENDERING) {
+            if (ImGui::Button("Stop render", {-1, 0})) {
+                stop_render();
+            }
+        } else {
+            if (ImGui::Button("Start render", {-1, 0})) {
+                start_render();
+            }
         }
         ImGui::Text("Render update:");
         ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
+        ImGui::BeginDisabled(t_state == RENDERING);
         ImGui::Text("Render threads:");
         ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency());
+        ImGui::EndDisabled();
         ImGui::Text("Samples per pixel:");
-        ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 100);
+        ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
+        ImGui::Text("Ray depth:");
+        ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
+        ImGui::Text("Reflectance:");
+        ImGui::SliderFloat("##e", (float *) &camera.reflectance, 0, 1);
 
 
         ImGui::Text("%dx%d (%.2f) %d", image_width, image_height, 1 / dt.asSeconds(), t_state);

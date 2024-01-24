@@ -15,6 +15,8 @@ public:
     int image_height{};
 
     int samples_per_pixel = 10;
+    int max_depth = 10;
+    float reflectance = 0.5;
 private:
 
     double focal_length{};
@@ -82,7 +84,7 @@ public:
                 Color pixel_color = Colors::black;
                 for (int sample = 0; sample < samples_per_pixel; ++sample) {
                     Ray ray = get_random_ray_at(i, j);
-                    pixel_color += ray_color(ray, world);
+                    pixel_color += ray_color(ray, max_depth, world);
                 }
                 pixel_color /= samples_per_pixel;
 
@@ -100,14 +102,14 @@ public:
 
     inline void render_pixel_line(unsigned int pixels[], const HittableList &world, int line) {
         for (int i = 0; i < image_width; ++i) {
-            Color pixel_color = Colors::black;
+            Color pixel_color = Color(0,0,0);
             for (int sample = 0; sample < samples_per_pixel; ++sample) {
                 Ray ray = get_random_ray_at(i, line);
-                pixel_color += ray_color(ray, world);
+                pixel_color += ray_color(ray, max_depth, world);
             }
             pixel_color /= samples_per_pixel;
 
-            auto sf_color = to_sf_color(pixel_color);
+            auto sf_color = to_sf_gamma_color(pixel_color);
             std::memcpy(&pixels[i], &sf_color, 4);
         }
     }
@@ -119,13 +121,23 @@ public:
 
     constexpr static const double infinity = std::numeric_limits<double>::infinity();
 
-    static Color ray_color(Ray &ray, const Hittable &world) {
+    Color ray_color(const Ray &ray, int depth, const Hittable &world) {
         HitRecord record;
-        if (world.hit(ray, Interval(0, infinity), record)) {
-            return 0.5 * (record.normal + Color(1, 1, 1));
+
+        if (depth <= 0)
+            return (Colors::black);
+
+        if (world.hit(ray, Interval(0.001, infinity), record)) {
+            Vec3 diffusion_direction = random_on_hemisphere(record.normal);
+            Vec3 lambertian_direction = record.normal + random_unit_vector();
+
+            return reflectance * ray_color(Ray(record.p, lambertian_direction), depth - 1, world);
+
+            // Show normal vectors, maybe a toggle
+            // return 0.5 * (record.normal + Color(1, 1, 1));
         }
 
-        Vec3 unit_direction = ray.direction().unit();
+        Vec3 unit_direction = ray.direction().normalize();
         auto a = 0.5 * (unit_direction.y + 1.0);
         return lerp(Colors::white, Colors::blue_sky, a);
     }
