@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "Hittable.h"
 
 class Sphere : public Hittable {
@@ -8,7 +10,7 @@ private:
     double radius;
     std::shared_ptr<Material> material;
 public:
-    Sphere(Point3 _center, double _radious, std::shared_ptr<Material> _material) : center(_center), radius(_radious), material(_material) {}
+    Sphere(Point3 _center, double _radious, std::shared_ptr<Material> _material) : center(_center), radius(_radious), material(std::move(_material)) {}
 
     bool hit(const Ray &ray, Interval interval, HitRecord &record) const override {
         Vec3 oc = ray.origin() - center;

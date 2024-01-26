@@ -99,10 +99,10 @@ public:
             pixel_color /= samples_per_pixel;
 
             auto rgba_color = to_gamma_color(pixel_color);
-            pixels[i*4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
-            pixels[i*4 + 1] = static_cast<unsigned char>(rgba_color.g * 255);
-            pixels[i*4 + 2] = static_cast<unsigned char>(rgba_color.b * 255);
-            pixels[i*4 + 3] = 255;
+            pixels[i * 4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
+            pixels[i * 4 + 1] = static_cast<unsigned char>(rgba_color.g * 255);
+            pixels[i * 4 + 2] = static_cast<unsigned char>(rgba_color.b * 255);
+            pixels[i * 4 + 3] = 255;
         }
     }
 
@@ -124,7 +124,7 @@ public:
 
     constexpr static const double infinity = std::numeric_limits<double>::infinity();
 
-    Color ray_color(const Ray &ray, int depth, const Hittable &world) {
+    Color ray_color_recursive(Ray &ray, int depth, const Hittable &world) {
         HitRecord record;
 
         if (depth <= 0)
@@ -134,16 +134,36 @@ public:
             Ray scattered_ray;
             Color attenuation;
             if (record.material->scatter(ray, record, attenuation, scattered_ray)) {
-                return attenuation * ray_color(scattered_ray, depth - 1, world);
+                return attenuation * ray_color_recursive(scattered_ray, depth - 1, world);
             };
             return Colors::black;
-
-            // Show normal vectors, maybe a toggle
-            // return 0.5 * (record.normal + Color(1, 1, 1));
         }
 
         Vec3 unit_direction = ray.direction().normalize();
         auto a = 0.5 * (unit_direction.y + 1.0);
         return lerp(Colors::white, Colors::blue_sky, a);
+    }
+
+    static Color ray_color(Ray &ray, int depth, const Hittable &world) {
+        HitRecord record;
+        Color attenuation;
+        Color ray_color{1, 1, 1};
+
+        if (depth <= 0)
+            return (Colors::black);
+
+        while (world.hit(ray, Interval(0.001, infinity), record)) {
+            if (depth-- <= 0) {
+                return (Colors::black);
+            } else if (record.material->scatter(ray, record, attenuation, ray)) {
+                ray_color = ray_color * attenuation;
+            } else {
+                return Colors::black;
+            }
+        }
+
+        Vec3 unit_direction = ray.direction().normalize();
+        auto a = 0.5 * (unit_direction.y + 1.0);
+        return ray_color * lerp(Colors::white, Colors::blue_sky, a);
     }
 };

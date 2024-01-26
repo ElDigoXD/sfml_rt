@@ -11,7 +11,7 @@ int main() {
     auto image_width = 1920;
     auto image_height = 1080;
     auto camera_10 = Camera(image_width, image_height, 2, 100);
-    auto camera_100 = Camera(image_width, image_height, 100, 100);
+    auto camera_100 = Camera(image_width, image_height, 20, 100);
     auto camera_1000 = Camera(image_width, image_height, 1000, 100);
 
     HittableList world;
@@ -29,7 +29,7 @@ int main() {
 
     BS::thread_pool pool{4};
 
-    for (auto threads: {8, 8}) {
+    for (auto threads: {6, 6, 6, 6}) {
         pool.reset(threads);
         auto start{std::chrono::steady_clock::now()};
 
