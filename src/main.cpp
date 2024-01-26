@@ -1,5 +1,8 @@
 #include "imgui.h"
 #include "imgui-SFML.h"
+
+#define BS_THREAD_POOL_ENABLE_PAUSE
+
 #include "third-party/BS_thread_pool.h"
 #include <SFML/Graphics.hpp>
 #include <thread>
@@ -35,6 +38,7 @@ public:
     unsigned int t_n;
     TState t_state = IDLE;
     BS::thread_pool pool{1};
+    std::jthread t;
 
     int render_time = 0;
     int render_update_ms;
@@ -239,16 +243,26 @@ public:
                 image.saveToFile("out.png");
             }
         }
-        ImGui::Checkbox("Continuous render", &continuous_render);
-
-        ImGui::Text("Render update:");
-        ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
 
         ImGui::BeginDisabled(t_state == RENDERING);
-        ImGui::Text("Render threads:");
-        if (ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency()))
-            pool.reset(t_n);
+        if (ImGui::Checkbox("Continuous render", &continuous_render)) {
+            if (continuous_render) {
+                continuous_render_sample_limit = camera.samples_per_pixel;
+            } else {
+                camera.samples_per_pixel = continuous_render_sample_limit;
+            }
+        }
         ImGui::EndDisabled();
+
+        ImGui::BeginDisabled(continuous_render);
+        ImGui::Text("Render update:");
+        ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
+        ImGui::EndDisabled();
+
+        ImGui::Text("Render threads:");
+        if (ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency())) {
+            pool.reset(t_n);
+        }
 
         if (continuous_render) {
             ImGui::Text("Stop at n samples:");
