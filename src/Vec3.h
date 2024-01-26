@@ -118,19 +118,6 @@ Vec3 reflect(const Vec3 &v, const Vec3 &n) {
 
 //
 
-class Color__ {
-public:
-    union {
-        struct {
-            double r;
-            double g;
-            double b;
-            double a;
-        };
-        double e[3]{0, 0, 0};
-    };
-};
-
 using Color = Vec3;
 using Point3 = Vec3;
 
@@ -152,12 +139,23 @@ sf::Color to_sf_gamma_color(Color color) {
             static_cast<sf::Uint8>( std::sqrt(color.b) * 255),
             255};
 }
+
 #endif
 
-Color to_gamma_color(Color color) {
+Color to_gamma_color(const Color &color) {
     return {std::sqrt(color.r),
             std::sqrt(color.g),
             std::sqrt(color.b)};
+}
+
+void to_float_array(const Color &color, float *array) {
+    array[0] = static_cast<float>(color.x);
+    array[1] = static_cast<float>(color.y);
+    array[2] = static_cast<float>(color.z);
+}
+
+Color from_float_array(const float *array) {
+    return {array[0], array[1], array[2]};
 }
 
 namespace Colors {

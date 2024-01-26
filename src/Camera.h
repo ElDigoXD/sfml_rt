@@ -99,13 +99,24 @@ public:
             pixel_color /= samples_per_pixel;
 
             auto rgba_color = to_gamma_color(pixel_color);
-            pixels[i*4 + 0] = static_cast<char>(rgba_color.r * 255);
-            pixels[i*4 + 1] = static_cast<char>(rgba_color.g * 255);
-            pixels[i*4 + 2] = static_cast<char>(rgba_color.b * 255);
+            pixels[i*4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
+            pixels[i*4 + 1] = static_cast<unsigned char>(rgba_color.g * 255);
+            pixels[i*4 + 2] = static_cast<unsigned char>(rgba_color.b * 255);
             pixels[i*4 + 3] = 255;
         }
     }
 
+    void render_color_line(Color pixels[], const HittableList &world, int line) {
+        for (int i = 0; i < image_width; ++i) {
+            Color pixel_color = Color(0, 0, 0);
+            for (int sample = 0; sample < samples_per_pixel; ++sample) {
+                Ray ray = get_random_ray_at(i, line);
+                pixel_color += ray_color(ray, max_depth, world);
+            }
+            pixel_color /= samples_per_pixel;
+            pixels[i] = pixel_color;
+        }
+    }
 
     static Color lerp(Color start, Color end, double a) {
         return (1 - a) * start + a * end;

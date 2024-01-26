@@ -13,8 +13,8 @@ public:
 
 
 class Lambertian : public Material {
-    Color albedo;
 public:
+    Color albedo;
     explicit Lambertian(const Color &_albedo) : albedo(_albedo) {}
 
     bool scatter(const Ray &ray_in, const HitRecord& record, Color &attenuation, Ray &scattered_ray) const override {
@@ -29,9 +29,9 @@ public:
 };
 
 class Metal : public Material {
+public:
     Color albedo;
     double fuzz;
-public:
     Metal(const Color &_albedo, double _fuzz) : albedo(_albedo), fuzz(_fuzz < 1 ? _fuzz : 1) {}
 
     bool scatter(const Ray &ray_in, const HitRecord& record, Color &attenuation, Ray &scattered_ray) const override {
