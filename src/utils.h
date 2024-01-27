@@ -56,11 +56,21 @@ namespace Random {
         return std::rand() / (RAND_MAX + 1.0); // NOLINT(*-msc50-cpp)
 #endif
 #ifdef __linux__
-        return XOrShift32() / (std::numeric_limits<uint32_t>::max() + 1.0);
 #endif
+        return rand_pcg() / (std::numeric_limits<uint32_t>::max() + 1.0);
+        return XOrShift32() / (std::numeric_limits<uint32_t>::max() + 1.0);
     }
 
     static double _double() { return generate_canonical(); }
 
     static double _double(double min, double max) { return min + (max - min) * _double(); }
 }
+
+#ifdef IS_SFML
+namespace ImGui {
+    bool SliderDouble(const char *label, double *v, double v_min, double v_max, const char *format = "%.3f",
+                      ImGuiSliderFlags flags = 0) {
+        return SliderScalar(label, ImGuiDataType_Double, v, &v_min, &v_max, format, flags);
+    }
+}
+#endif

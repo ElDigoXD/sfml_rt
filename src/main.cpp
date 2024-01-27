@@ -6,11 +6,13 @@
 #include "third-party/BS_thread_pool.h"
 #include <SFML/Graphics.hpp>
 #include <thread>
+#include <type_traits>
 
 #include "utils.h"
 #include "Vec3.h"
 #include "Camera.h"
 #include "Material.h"
+
 
 class GUI {
 public:
@@ -49,8 +51,9 @@ public:
 
     std::shared_ptr<Lambertian> material_ground;
     std::shared_ptr<Lambertian> material_center;
-    std::shared_ptr<Metal> material_left;
+    std::shared_ptr<Dielectric> material_left;
     std::shared_ptr<Metal> material_right;
+    std::shared_ptr<Normals> material_normals;
 
     Color *colors_agg = new Color[max_window_width * max_window_height];
     Color *colors = new Color[max_window_width * max_window_height];
@@ -72,13 +75,15 @@ public:
         continuous_render_sample_limit = 100;
 
         material_ground = std::make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
-        material_center = std::make_shared<Lambertian>(Color(0.7, 0.3, 0.3));
-        material_left = std::make_shared<Metal>(Color(0.8, 0.8, 0.8), 0.3);
-        material_right = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 1);
+        material_center = std::make_shared<Lambertian>(Color(0.1, 0.2, 0.5));
+        material_left = std::make_shared<Dielectric>(1.5);
+        material_right = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 0);
+        material_normals = std::make_shared<Normals>();
 
         world.add(std::make_shared<Sphere>(Point3(0.0, -100.5, -1.0), 100.0, material_ground));
         world.add(std::make_shared<Sphere>(Point3(0.0, 0.0, -1.0), 0.5, material_center));
         world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), 0.5, material_left));
+        world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), -0.4, material_left));
         world.add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, material_right));
     }
 
@@ -280,10 +285,20 @@ public:
 
         bool re_render_on_material_change = true;
         ImGui::Checkbox("Render on change", &re_render_on_material_change);
-        if (ImGui::CollapsingHeader("Materials")) {
-            if (a(material_center) && re_render_on_material_change) {
-                start_render();
-            };
+        if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+            for (auto mat: std::map<char *, Material *>{{"Left",   material_left.get()},
+                                                        {"Center", material_center.get()},
+                                                        {"Right",  material_right.get()}}) {
+                if (ImGui::TreeNode(mat.first)) {
+                    ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+                    if (imgui_mat(mat.second) & re_render_on_material_change) {
+                        start_render();
+                    }
+                    ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+                    ImGui::TreePop();
+                }
+            }
         }
         ImGui::Separator();
         ImGui::Text("%dx%d %d samples, %4.0ffps", image_width, image_height, pass_number * camera.samples_per_pixel,
@@ -295,29 +310,38 @@ public:
         ImGui::End();
     }
 
-    template<class T = Material>
-    bool a(T material) {
+    template<class T>
+    bool imgui_mat(T &material) {
         auto updated = false;
-        if (ImGui::TreeNode("Center")) {
-            if constexpr (std::is_same<T, Metal>::value) {
-                ImGui::SliderScalar("a", ImGuiDataType_Double, &material.fuzz);
-            }
-
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-            float mat[3];
-            to_float_array(material_center->albedo, mat);
-            if (ImGui::ColorPicker3("A", mat)) {
-                material_center->albedo = from_float_array(mat);
+        if (auto *dielectric = dynamic_cast<Dielectric *>(material)) {
+            if (ImGui::SliderDouble("Refraction index", &dielectric->refraction_index, 0.001, 5, "%.3f",
+                                    ImGuiSliderFlags_AlwaysClamp)) {
                 updated = true;
             }
-            ImGui::TreePop();
+        } else if (auto *metal = dynamic_cast<Metal *>(material)) {
+            if (ImGui::SliderDouble("Fuzz", &metal->fuzz, 0, 1)) {
+                updated = true;
+            }
+            float mat[3];
+            to_float_array(metal->albedo, mat);
+            if (ImGui::ColorPicker3("###pls", mat)) {
+                metal->albedo = from_float_array(mat);
+                updated = true;
+            }
+        } else if (auto *lambertian = dynamic_cast<Lambertian * > (material)) {
+            float mat[3];
+            to_float_array(lambertian->albedo, mat);
+            if (ImGui::ColorPicker3("###pls2", mat)) {
+                lambertian->albedo = from_float_array(mat);
+                updated = true;
+            }
         }
-        return updated;
 
+        return updated;
     }
 
-
 };
+
 
 int main() {
     GUI gui;

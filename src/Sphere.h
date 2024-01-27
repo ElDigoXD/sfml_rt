@@ -27,7 +27,7 @@ public:
         // if first root is not in range
         auto root = (-half_b - sqrt_discriminant) / a;
         if (!interval.surrounds(root)) {
-            root = (-half_b - sqrt_discriminant) / a;
+            root = (-half_b + sqrt_discriminant) / a;
             // if second root is not in range
             if (!interval.surrounds(root)) {
                 return false;
