@@ -50,10 +50,11 @@ public:
     sf::Clock render_clock;
 
     std::shared_ptr<Lambertian> material_ground;
-    std::shared_ptr<Lambertian> material_center;
+    std::shared_ptr<Dielectric> material_center;
     std::shared_ptr<Dielectric> material_left;
     std::shared_ptr<Metal> material_right;
     std::shared_ptr<Normals> material_normals;
+    std::shared_ptr<Sphere> look_at;
 
     Color *colors_agg = new Color[max_window_width * max_window_height];
     Color *colors = new Color[max_window_width * max_window_height];
@@ -63,6 +64,11 @@ public:
 
     int continuous_render_sample_limit;
 
+    sf::Vector2i before_click_mouse_position;
+    sf::Vector2i before_move_mouse_position;
+    bool mouse_pressed = false;
+    sf::Time dt;
+
     GUI() {
         // Imgui variables
         render_update_ms = 1;
@@ -70,12 +76,15 @@ public:
         pool.reset(t_n);
         camera.samples_per_pixel = 10;
         camera.max_depth = 100;
-
+        camera.vfov = 90;
+        camera.look_from = {-2, 2, 1};
+        camera.look_at = {0, 0, -1};
+        camera.update();
         continuous_render = true;
         continuous_render_sample_limit = 100;
 
         material_ground = std::make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
-        material_center = std::make_shared<Lambertian>(Color(0.1, 0.2, 0.5));
+        material_center = std::make_shared<Dielectric>(1.5);
         material_left = std::make_shared<Dielectric>(1.5);
         material_right = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 0);
         material_normals = std::make_shared<Normals>();
@@ -85,31 +94,23 @@ public:
         world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), 0.5, material_left));
         world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), -0.4, material_left));
         world.add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, material_right));
+        look_at = std::make_shared<Sphere>(camera.look_at, 0.2, material_normals);
+        //world.add(look_at);
     }
 
     void run() {
         // Gui stuff
-        window.setFramerateLimit(165);
+        window.setFramerateLimit(60);
         auto _ = ImGui::SFML::Init(window);
         ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         texture.create(max_window_width, max_window_height);
         sprite.setTexture(texture, true);
 
-        // World declaration
-        // old
-        // world.add(std::make_shared<Sphere>(Point3(0, 0, -1), 0.5,
-        //                                    std::make_shared<Lambertian>(Colors::white/2)));
-        // world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100,
-        //                                   std::make_shared<Lambertian>(Colors::white/2)));
-        // new
-
-
-
         start_render();
 
         while (window.isOpen()) {
+            dt = delta_clock.restart();
             auto event = sf::Event{};
-
             while (window.pollEvent(event)) {
                 ImGui::SFML::ProcessEvent(window, event);
                 if (event.type == sf::Event::Closed) {
@@ -128,20 +129,41 @@ public:
                     camera.update(static_cast<int>(image_width), static_cast<int>(image_height));
 
                     start_render();
+                } else if (event.type == sf::Event::MouseButtonPressed) {
+                    if ((event.mouseButton.button == sf::Mouse::Left
+                         || event.mouseButton.button == sf::Mouse::Right)
+                        && sprite.getGlobalBounds().contains(event.mouseButton.x, event.mouseButton.y)
+                        && sf::Mouse::getPosition(window).x < image_width) {
+                        mouse_pressed = true;
+                        window.setMouseCursorVisible(false);
+                        before_click_mouse_position = sf::Mouse::getPosition(window);
+                        before_move_mouse_position = before_click_mouse_position;
+                    }
+                } else if (event.type == sf::Event::MouseButtonReleased) {
+                    if (mouse_pressed
+                        && (event.mouseButton.button == sf::Mouse::Left
+                            || event.mouseButton.button == sf::Mouse::Right)) {
+                        mouse_pressed = false;
+                        window.setMouseCursorVisible(true);
+                        sf::Mouse::setPosition(before_click_mouse_position, window);
+                    }
+                } else if (event.type == sf::Event::MouseWheelMoved
+                           && window.hasFocus()) {
+                    camera.vfov -= event.mouseWheel.delta;
+
+                    update_camera_and_start_render();
                 }
             }
+
+            handle_mouse();
+
+            handle_keyboard();
+
 
             if (t_state != IDLE) {
                 if (continuous_render) {
                     if (pool.get_tasks_total() == 0 && t_state != DONE) {
-                        for (int i = 0; i < image_width * image_height; ++i) {
-                            colors_agg[i] = (colors_agg[i] * (pass_number - 1) + colors[i]) / pass_number;
-                            auto rgba_color = to_gamma_color(colors_agg[i]);
-                            pixels[i * 4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
-                            pixels[i * 4 + 1] = static_cast<unsigned char>(rgba_color.g * 255);
-                            pixels[i * 4 + 2] = static_cast<unsigned char>(rgba_color.b * 255);
-                            pixels[i * 4 + 3] = 255;
-                        }
+                        colors_to_pixel();
                         texture.update(pixels, image_width, image_height, 0, 0);
                         pass_number++;
                         if (pass_number * camera.samples_per_pixel < continuous_render_sample_limit) {
@@ -156,7 +178,6 @@ public:
                             t_state = IDLE;
                             render_time = render_clock.getElapsedTime().asMilliseconds();
                         }
-
                     }
                 } else if (pool.get_tasks_total() > 0) {
                     if (update_texture_clock.getElapsedTime().asMilliseconds() > render_update_ms) {
@@ -192,8 +213,6 @@ public:
         render_clock.restart();
         memset(pixels, 0, max_window_width * max_window_height * 4);
 
-        texture.update(pixels, image_width, image_height, 0, 0);
-
         if (continuous_render) {
             camera.samples_per_pixel = 1;
             pool.detach_loop(0U, image_height, [this](int j) {
@@ -207,8 +226,96 @@ public:
         t_state = RENDERING;
     };
 
+    void colors_to_pixel() {
+        for (int i = 0; i < image_width * image_height; ++i) {
+            colors_agg[i] = (colors_agg[i] * (pass_number - 1) + colors[i]) / pass_number;
+            auto rgba_color = to_gamma_color(colors_agg[i]);
+            pixels[i * 4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
+            pixels[i * 4 + 1] = static_cast<unsigned char>(rgba_color.g * 255);
+            pixels[i * 4 + 2] = static_cast<unsigned char>(rgba_color.b * 255);
+            pixels[i * 4 + 3] = 255;
+        }
+    }
+
+    void handle_mouse() {
+        auto rodrigues_rotation = [](Vec3 v, Vec3 k, double deg) -> Vec3 {
+            return v * cos(deg) + cross(k, v) * sin(deg) + k * dot(k, v) * (1 - cos(deg));
+        };
+        if (mouse_pressed) {
+            auto new_position = sf::Mouse::getPosition(window);
+            sf::Mouse::setPosition(before_click_mouse_position, window);
+            auto delta = before_move_mouse_position - new_position;
+            if (delta != sf::Vector2i(0, 0)) {
+
+                auto new_look_at = rodrigues_rotation(
+                        camera.camera_center - camera.look_at, camera.u, (delta.y) / 500.0);
+                new_look_at = rodrigues_rotation(
+                        new_look_at, Vec3(0, 1, 0), (delta.x) / 500.0);
+
+                camera.look_at = (camera.camera_center - new_look_at);
+
+                update_camera_and_start_render();
+            }
+        }
+    }
+
+    void handle_keyboard() {
+        auto speed = 0.003 * dt.asMilliseconds();
+        if (!window.hasFocus()) return;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+            auto displacement = speed * cross(Vec3(0, 1, 0), camera.u);
+            camera.look_at += displacement;
+            camera.look_from += displacement;
+
+            update_camera_and_start_render();
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+            auto displacement = -speed * cross(Vec3(0, 1, 0), camera.u);
+            camera.look_at += displacement;
+            camera.look_from += displacement;
+
+            update_camera_and_start_render();
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+            auto displacement = -speed * camera.u;
+            camera.look_at += displacement;
+            camera.look_from += displacement;
+
+            update_camera_and_start_render();
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+            auto displacement = speed * camera.u;
+            camera.look_at += displacement;
+            camera.look_from += displacement;
+
+            update_camera_and_start_render();
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+            auto displacement = speed * Vec3(0, 1, 0);
+            camera.look_at += displacement;
+            camera.look_from += displacement;
+
+            update_camera_and_start_render();
+
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+            auto displacement = -speed * Vec3(0, 1, 0);
+            camera.look_at += displacement;
+            camera.look_from += displacement;
+
+            update_camera_and_start_render();
+        }
+    }
+
+    void update_camera_and_start_render() {
+        camera.update();
+
+        look_at->center = camera.look_at;
+        if (continuous_render) {
+            colors_to_pixel();
+        }
+        texture.update(pixels, image_width, image_height, 0, 0);
+        start_render();
+    }
+
     void imgui() {
-        const sf::Time &dt = delta_clock.restart();
         ImGui::SFML::Update(window, dt);
         ImGuiWindowFlags window_flags = 0;
         window_flags |= ImGuiWindowFlags_NoMove;
@@ -259,6 +366,8 @@ public:
         }
         ImGui::EndDisabled();
 
+        ImGui::Text("%f", (camera.look_from - camera.look_at).y);
+
         ImGui::BeginDisabled(continuous_render);
         ImGui::Text("Render update:");
         ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
@@ -280,6 +389,12 @@ public:
 
         ImGui::Text("Ray depth:");
         ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
+
+        ImGui::Text("Fov:");
+        if (ImGui::SliderDouble("##e", &camera.vfov, 1, 200)) {
+            camera.update();
+            start_render();
+        }
 
         ImGui::Separator();
 

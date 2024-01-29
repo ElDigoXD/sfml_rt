@@ -7,6 +7,7 @@
 #include <iostream>
 #include <random>
 #include <cstring>
+#include <numbers>
 
 class Camera {
 public:
@@ -15,17 +16,24 @@ public:
     int samples_per_pixel;
 
     int max_depth;
-    float reflectance{};
-private:
-    double aspect_ratio{};
+    double vfov{90};
 
-    double focal_length{};
-    double viewport_width{};
-    double viewport_height{};
-    Point3 camera_center;
+    Point3 look_from = Point3(0, 0, -1);
+    Point3 look_at = Point3(0, 0, 0);
+
+    Vec3 u, v, w;
 
     Vec3 viewport_x;
     Vec3 viewport_y;
+
+    double focal_length{};
+    Point3 camera_center;
+
+private:
+
+    double aspect_ratio{};
+    double viewport_width{};
+    double viewport_height{};
 
     Vec3 pixel_delta_x;
     Vec3 pixel_delta_y;
@@ -48,24 +56,36 @@ public:
         update(image_width, image_height);
     }
 
+    void update() { update(image_width, image_height); }
+
     void update(int width, int height) {
         image_width = width;
         image_height = height;
 
         aspect_ratio = width * 1.0 / height;
 
-        focal_length = 1;
-        viewport_height = 2;
-        viewport_width = viewport_height * (width * 1.0 / height);
-        camera_center = Point3(0, 0, 0);
+        camera_center = look_from;
 
-        viewport_x = Vec3(viewport_width, 0, 0);
-        viewport_y = Vec3(0, -viewport_height, 0);
+
+        focal_length = (look_from - look_at).length();
+        auto theta = vfov * std::numbers::pi / 180.0;
+        auto h = tan(theta / 2);
+
+        viewport_height = 2 * h * focal_length;
+        viewport_width = viewport_height * (width * 1.0 / height);
+
+        w = (look_from - look_at).normalize();
+        u = cross(Vec3(0, 1, 0), w).normalize();
+        v = cross(w, u);
+
+
+        viewport_x = viewport_width * u;
+        viewport_y = viewport_height * -v;
 
         pixel_delta_x = viewport_x / width;
         pixel_delta_y = viewport_y / height;
 
-        viewport_upper_left = camera_center - Vec3(0, 0, focal_length) - viewport_x / 2 - viewport_y / 2;
+        viewport_upper_left = camera_center - (focal_length * w) - viewport_x / 2 - viewport_y / 2;
         pixel_00_location = viewport_upper_left + 0.5 * (pixel_delta_x + pixel_delta_y);
     }
 
