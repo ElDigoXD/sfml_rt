@@ -444,10 +444,10 @@ public:
         ImGui::Checkbox("Render on change", &re_render_on_material_change);
         if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-            for (auto mat: std::map<char *, Material *>{{"Left",   material_left.get()},
+            for (auto mat: std::map<std::string, Material *>{{"Left",   material_left.get()},
                                                         {"Center", material_center.get()},
                                                         {"Right",  material_right.get()}}) {
-                if (ImGui::TreeNode(mat.first)) {
+                if (ImGui::TreeNode(mat.first.c_str())) {
                     ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
                     if (imgui_mat(mat.second) & re_render_on_material_change) {
                         start_render();

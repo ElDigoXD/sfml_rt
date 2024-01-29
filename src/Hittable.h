@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AABB.h"
 #include "Vec3.h"
 #include "Ray.h"
 #include "memory"
@@ -27,18 +28,22 @@ public:
     virtual ~Hittable() = default;
 
     virtual bool hit(const Ray &ray, Interval interval, HitRecord &record) const = 0;
+
+    [[nodiscard]] virtual AABB bounding_box() const = 0;
 };
 
 class HittableList : public Hittable {
+    AABB bbox;
 public:
     std::vector<std::shared_ptr<Hittable>> objects;
 
-    HittableList() {}
+    HittableList() = default;
 
-    HittableList(std::shared_ptr<Hittable> object) { add(object); }
+    explicit HittableList(const std::shared_ptr<Hittable> &_object) { add(_object); }
 
-    void add(std::shared_ptr<Hittable> object) {
+    void add(const std::shared_ptr<Hittable>& object) {
         objects.push_back(object);
+        bbox = AABB(bbox, object->bounding_box());
     }
 
     bool hit(const Ray &ray, Interval interval, HitRecord &record) const override {
@@ -54,5 +59,9 @@ public:
             }
         }
         return hit;
+    }
+
+    [[nodiscard]] AABB bounding_box() const override {
+        return bbox;
     }
 };

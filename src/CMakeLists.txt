@@ -12,6 +12,8 @@ add_executable(sfml_rt_exe #WIN32
         third-party/pcg_random/pcg_random.hpp
         third-party/pcg_random/pcg_extras.hpp
         third-party/pcg_random/pcg_uint128.hpp
+        AABB.h
+        AABB.h
 )
 target_compile_definitions(sfml_rt_exe PRIVATE IS_SFML)
 
@@ -30,6 +32,7 @@ add_executable(sfml_rt_profiler_exe #WIN32
         third-party/pcg_random/pcg_random.hpp
         third-party/pcg_random/pcg_extras.hpp
         third-party/pcg_random/pcg_uint128.hpp
+        AABB.h
 )
 target_compile_definitions(sfml_rt_profiler_exe PRIVATE PROFILE)
 

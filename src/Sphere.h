@@ -8,9 +8,13 @@ class Sphere : public Hittable {
 private:
     double radius;
     std::shared_ptr<Material> material;
+    AABB bbox;
 public:
     Point3 center;
-    Sphere(Point3 _center, double _radious, std::shared_ptr<Material> _material) : center(_center), radius(_radious), material(std::move(_material)) {}
+    Sphere(Point3 _center, double _radious, std::shared_ptr<Material> _material) : center(_center), radius(_radious), material(std::move(_material)) {
+        auto radius_vec = Vec3(radius, radius, radius);
+        bbox = AABB(center - radius_vec, center + radius_vec);
+    }
 
     bool hit(const Ray &ray, Interval interval, HitRecord &record) const override {
         Vec3 oc = ray.origin() - center;
@@ -41,5 +45,9 @@ public:
         record.material = material;
 
         return true;
+    }
+
+    [[nodiscard]] AABB bounding_box() const override {
+        return bbox;
     }
 };
