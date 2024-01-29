@@ -105,6 +105,15 @@ Vec3 random_in_unit_sphere() {
     }
 }
 
+Vec3 random_in_unit_disk() {
+    while (true) {
+        auto p = Vec3{Random::_double(-1, 1), Random::_double(-1, 1), 0};
+        if (p.length_squared() < 1) {
+            return p;
+        }
+    }
+}
+
 Vec3 random_unit_vector() { return random_in_unit_sphere().normalize(); }
 
 Vec3 random_on_hemisphere(const Vec3 &normal) {

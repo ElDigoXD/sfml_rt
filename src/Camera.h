@@ -23,11 +23,11 @@ public:
 
     Vec3 u, v, w;
 
-    Vec3 viewport_x;
-    Vec3 viewport_y;
-
     double focal_length{};
     Point3 camera_center;
+
+    double defocus_angle = 10;
+    double focus_dist = 3.4;
 
 private:
 
@@ -37,6 +37,11 @@ private:
 
     Vec3 pixel_delta_x;
     Vec3 pixel_delta_y;
+
+    Vec3 viewport_x;
+    Vec3 viewport_y;
+    Vec3 defocus_disk_x;
+    Vec3 defocus_disk_y;
 
     Vec3 viewport_upper_left;
 
@@ -67,11 +72,11 @@ public:
         camera_center = look_from;
 
 
-        focal_length = (look_from - look_at).length();
-        auto theta = vfov * std::numbers::pi / 180.0;
+        focus_dist = (look_from - look_at).length();
+        auto theta = degrees_to_radians(vfov);
         auto h = tan(theta / 2);
 
-        viewport_height = 2 * h * focal_length;
+        viewport_height = 2 * h * focus_dist;
         viewport_width = viewport_height * (width * 1.0 / height);
 
         w = (look_from - look_at).normalize();
@@ -85,15 +90,21 @@ public:
         pixel_delta_x = viewport_x / width;
         pixel_delta_y = viewport_y / height;
 
-        viewport_upper_left = camera_center - (focal_length * w) - viewport_x / 2 - viewport_y / 2;
+        viewport_upper_left = camera_center - (focus_dist * w) - viewport_x / 2 - viewport_y / 2;
         pixel_00_location = viewport_upper_left + 0.5 * (pixel_delta_x + pixel_delta_y);
+
+        auto defocus_radius = focus_dist * tan(degrees_to_radians(defocus_angle / 2));
+        defocus_disk_x = u * defocus_radius;
+        defocus_disk_y = v * defocus_radius;
     }
 
     Ray get_random_ray_at(int i, int j) {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto pixel_sample = pixel_center + pixel_sample_square();
 
-        return Ray(camera_center, pixel_sample - camera_center);
+        auto ray_origin = (defocus_angle <= 0) ? camera_center : defocus_disk_sample();
+
+        return Ray(ray_origin, pixel_sample - ray_origin);
 
     }
 
@@ -102,6 +113,10 @@ public:
                (-0.5 + Random::generate_canonical()) * pixel_delta_y;
     }
 
+    [[nodiscard]] Point3 defocus_disk_sample() const {
+        auto p = random_in_unit_disk();
+        return camera_center + p.x * defocus_disk_x + p.y * defocus_disk_y;
+    }
 
     void render(unsigned char pixels[], const HittableList &world) {
         for (int j = 0; j < image_height; ++j) {

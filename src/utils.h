@@ -7,6 +7,12 @@
 #include "third-party/pcg_random/pcg_random.hpp"
 
 constexpr static const double infinity = std::numeric_limits<double>::infinity();
+
+double degrees_to_radians(double degrees) {
+    return degrees * std::numbers::pi / 180.0;
+}
+
+
 namespace Random {
     class Random {
     public:

@@ -76,9 +76,10 @@ public:
         pool.reset(t_n);
         camera.samples_per_pixel = 10;
         camera.max_depth = 100;
-        camera.vfov = 90;
-        camera.look_from = {-2, 2, 1};
-        camera.look_at = {0, 0, -1};
+        camera.vfov = 20;
+        camera.look_from = {13, 2, 3};
+        camera.look_at = camera.look_from - unit_vector(camera.look_from) * 10;
+        camera.defocus_angle = 0.6;
         camera.update();
         continuous_render = true;
         continuous_render_sample_limit = 100;
@@ -95,7 +96,47 @@ public:
         world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), -0.4, material_left));
         world.add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, material_right));
         look_at = std::make_shared<Sphere>(camera.look_at, 0.2, material_normals);
-        //world.add(look_at);
+        // world.add(look_at);
+        world = HittableList();
+        auto ground_material = std::make_shared<Lambertian>(Color(0.5, 0.5, 0.5));
+        world.add(make_shared<Sphere>(Point3(0, -1000, 0), 1000, ground_material));
+
+        for (int a = -11; a < 11; a++) {
+            for (int b = -11; b < 11; b++) {
+                auto choose_mat = Random::_double();
+                Point3 center(a + 0.9 * Random::_double(), 0.2, b + 0.9 * Random::_double());
+
+                if ((center - Point3(4, 0.2, 0)).length() > 0.9) {
+                    std::shared_ptr<Material> sphere_material;
+
+                    if (choose_mat < 0.8) {
+                        // diffuse
+                        auto albedo = Color::random() * Color::random();
+                        sphere_material = std::make_shared<Lambertian>(albedo);
+                        world.add(make_shared<Sphere>(center, 0.2, sphere_material));
+                    } else if (choose_mat < 0.95) {
+                        // metal
+                        auto albedo = Color::random(0.5, 1);
+                        auto fuzz = Random::_double(0, 0.5);
+                        sphere_material = std::make_shared<Metal>(albedo, fuzz);
+                        world.add(make_shared<Sphere>(center, 0.2, sphere_material));
+                    } else {
+                        // glass
+                        sphere_material = std::make_shared<Dielectric>(1.5);
+                        world.add(make_shared<Sphere>(center, 0.2, sphere_material));
+                    }
+                }
+            }
+        }
+
+        auto material1 = std::make_shared<Dielectric>(1.5);
+        world.add(make_shared<Sphere>(Point3(0, 1, 0), 1.0, material1));
+
+        auto material2 = std::make_shared<Lambertian>(Color(0.4, 0.2, 0.1));
+        world.add(make_shared<Sphere>(Point3(-4, 1, 0), 1.0, material2));
+
+        auto material3 = std::make_shared<Metal>(Color(0.7, 0.6, 0.5), 0.0);
+        world.add(make_shared<Sphere>(Point3(4, 1, 0), 1.0, material3));
     }
 
     void run() {
@@ -132,7 +173,7 @@ public:
                 } else if (event.type == sf::Event::MouseButtonPressed) {
                     if ((event.mouseButton.button == sf::Mouse::Left
                          || event.mouseButton.button == sf::Mouse::Right)
-                        && sprite.getGlobalBounds().contains(event.mouseButton.x, event.mouseButton.y)
+                        && sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
                         && sf::Mouse::getPosition(window).x < image_width) {
                         mouse_pressed = true;
                         window.setMouseCursorVisible(false);
@@ -148,7 +189,10 @@ public:
                         sf::Mouse::setPosition(before_click_mouse_position, window);
                     }
                 } else if (event.type == sf::Event::MouseWheelMoved
-                           && window.hasFocus()) {
+                           && window.hasFocus()
+                           &&
+                           sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
+                           && sf::Mouse::getPosition(window).x < image_width) {
                     camera.vfov -= event.mouseWheel.delta;
 
                     update_camera_and_start_render();
@@ -365,8 +409,6 @@ public:
             }
         }
         ImGui::EndDisabled();
-
-        ImGui::Text("%f", (camera.look_from - camera.look_at).y);
 
         ImGui::BeginDisabled(continuous_render);
         ImGui::Text("Render update:");
