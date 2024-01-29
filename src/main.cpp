@@ -373,70 +373,85 @@ public:
         ImGui::SetNextWindowSize({200, (float) (current_height)});
         ImGui::SetNextWindowBgAlpha(1);
         ImGui::Begin("Hello, world!", nullptr, window_flags);
-        ImGui::PushItemWidth(-1.0f);
-        if (t_state == RENDERING) {
-            if (ImGui::Button("Stop render", {-1, 0})) {
-                stop_render();
+        ImGui::BeginTabBar("aaaaaa");
+        if (ImGui::BeginTabItem("Render")) {
+            ImGui::PushItemWidth(-1.0f);
+            if (t_state == RENDERING) {
+                if (ImGui::Button("Stop render", {-1, 0})) {
+                    stop_render();
+                }
+            } else {
+                if (ImGui::Button("Start render", {-1, 0})) {
+                    start_render();
+                }
             }
-        } else {
-            if (ImGui::Button("Start render", {-1, 0})) {
+
+            if (t_state == RENDERING) {
+                if (continuous_render) {
+                    ImGui::ProgressBar((float) pass_number * camera.samples_per_pixel /
+                                       continuous_render_sample_limit); // NOLINT(*-narrowing-conversions)
+                } else {
+                    ImGui::ProgressBar((50.0f - (float) pool.get_tasks_total()) / 50);
+                }
+            } else {
+                if (ImGui::Button("Save render", {-1, 0})) {
+                    sf::Image image;
+                    image.create(image_width, image_height, pixels);
+                    image.saveToFile("out.png");
+                }
+            }
+
+            ImGui::BeginDisabled(t_state == RENDERING);
+            if (ImGui::Checkbox("Continuous render", &continuous_render)) {
+                if (continuous_render) {
+                    continuous_render_sample_limit = camera.samples_per_pixel;
+                } else {
+                    camera.samples_per_pixel = continuous_render_sample_limit;
+                }
+            }
+            ImGui::EndDisabled();
+
+            ImGui::BeginDisabled(continuous_render);
+            ImGui::Text("Render update:");
+            ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
+            ImGui::EndDisabled();
+
+            ImGui::Text("Render threads:");
+            if (ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency())) {
+                pool.reset(t_n);
+            }
+
+            if (continuous_render) {
+                ImGui::Text("Stop at n samples:");
+                ImGui::SliderInt("##c", (int *) &continuous_render_sample_limit, 10, 10000, "%d",
+                                 ImGuiSliderFlags_Logarithmic);
+            } else {
+                ImGui::Text("Samples per pixel:");
+                ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
+            }
+
+            ImGui::Text("Ray depth:");
+            ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
+
+            ImGui::EndTabItem();
+    }
+        if (ImGui::BeginTabItem("Camera")) {
+
+            ImGui::Text("Fov:");
+            if (ImGui::SliderDouble("##e", &camera.vfov, 1, 200)) {
+                camera.update();
                 start_render();
             }
-        }
 
-
-        if (t_state == RENDERING) {
-            if (continuous_render) {
-                ImGui::ProgressBar((float) pass_number * camera.samples_per_pixel /
-                                   continuous_render_sample_limit); // NOLINT(*-narrowing-conversions)
-            } else {
-                ImGui::ProgressBar((50.0f - (float) pool.get_tasks_total()) / 50);
+            ImGui::Text("Defocus:");
+            if (ImGui::SliderDouble("##i", &camera.defocus_angle, 0, 5)) {
+                camera.update();
+                start_render();
             }
-        } else {
-            if (ImGui::Button("Save render", {-1, 0})) {
-                sf::Image image;
-                image.create(image_width, image_height, pixels);
-                image.saveToFile("out.png");
-            }
+
+            ImGui::EndTabItem();
         }
 
-        ImGui::BeginDisabled(t_state == RENDERING);
-        if (ImGui::Checkbox("Continuous render", &continuous_render)) {
-            if (continuous_render) {
-                continuous_render_sample_limit = camera.samples_per_pixel;
-            } else {
-                camera.samples_per_pixel = continuous_render_sample_limit;
-            }
-        }
-        ImGui::EndDisabled();
-
-        ImGui::BeginDisabled(continuous_render);
-        ImGui::Text("Render update:");
-        ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
-        ImGui::EndDisabled();
-
-        ImGui::Text("Render threads:");
-        if (ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency())) {
-            pool.reset(t_n);
-        }
-
-        if (continuous_render) {
-            ImGui::Text("Stop at n samples:");
-            ImGui::SliderInt("##c", (int *) &continuous_render_sample_limit, 10, 10000, "%d",
-                             ImGuiSliderFlags_Logarithmic);
-        } else {
-            ImGui::Text("Samples per pixel:");
-            ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
-        }
-
-        ImGui::Text("Ray depth:");
-        ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
-
-        ImGui::Text("Fov:");
-        if (ImGui::SliderDouble("##e", &camera.vfov, 1, 200)) {
-            camera.update();
-            start_render();
-        }
 
         ImGui::Separator();
 
@@ -496,7 +511,6 @@ public:
 
         return updated;
     }
-
 };
 
 
