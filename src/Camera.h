@@ -23,7 +23,6 @@ public:
 
     Vec3 u, v, w;
 
-    double focal_length{};
     Point3 camera_center;
 
     double defocus_angle = 10;
@@ -31,12 +30,14 @@ public:
 
 private:
 
-    double aspect_ratio{};
     double viewport_width{};
     double viewport_height{};
 
     Vec3 pixel_delta_x;
     Vec3 pixel_delta_y;
+    Vec3 subpixel_delta_x;
+    Vec3 subpixel_delta_y;
+
 
     Vec3 viewport_x;
     Vec3 viewport_y;
@@ -67,10 +68,7 @@ public:
         image_width = width;
         image_height = height;
 
-        aspect_ratio = width * 1.0 / height;
-
         camera_center = look_from;
-
 
         focus_dist = (look_from - look_at).length();
         auto theta = degrees_to_radians(vfov);
@@ -105,12 +103,35 @@ public:
         auto ray_origin = (defocus_angle <= 0) ? camera_center : defocus_disk_sample();
 
         return Ray(ray_origin, pixel_sample - ray_origin);
+    }
 
+    Ray get_random_ray_at_subpixel(int i, int j, int sub_i, int sub_j) {
+        auto subpixel_center =
+                viewport_upper_left + i * pixel_delta_x + j * pixel_delta_y + sub_i * subpixel_delta_x +
+                sub_j * subpixel_delta_y;
+        auto pixel_sample = subpixel_center + subpixel_sample_square();
+
+        auto ray_origin = (defocus_angle <= 0) ? camera_center : defocus_disk_sample();
+
+        return Ray(ray_origin, pixel_sample - ray_origin);
+    }
+
+
+    Ray get_ray_at(int i, int j) {
+        auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
+        auto ray_origin = camera_center;
+
+        return Ray(ray_origin, pixel_center - ray_origin);
     }
 
     [[nodiscard]] Vec3 pixel_sample_square() const {
         return (-0.5 + Random::generate_canonical()) * pixel_delta_x +
                (-0.5 + Random::generate_canonical()) * pixel_delta_y;
+    }
+
+    [[nodiscard]] Vec3 subpixel_sample_square() const {
+        return (-0.5 + Random::generate_canonical()) * subpixel_delta_x +
+               (-0.5 + Random::generate_canonical()) * subpixel_delta_y;
     }
 
     [[nodiscard]] Point3 defocus_disk_sample() const {
@@ -125,13 +146,20 @@ public:
     }
 
     void render_pixel_line(unsigned char pixels[], const HittableList &world, int line) {
+        int spp_sq = std::floor(std::sqrt(samples_per_pixel));
+        subpixel_delta_x = pixel_delta_x / spp_sq;
+        subpixel_delta_y = pixel_delta_y / spp_sq;
+
         for (int i = 0; i < image_width; ++i) {
             Color pixel_color = Color(0, 0, 0);
-            for (int sample = 0; sample < samples_per_pixel; ++sample) {
-                Ray ray = get_random_ray_at(i, line);
-                pixel_color += ray_color(ray, max_depth, world);
+
+            for (int sample_i = 0; sample_i < spp_sq; ++sample_i) {
+                for (int sample_j = 0; sample_j < spp_sq; ++sample_j) {
+                    Ray ray = get_random_ray_at_subpixel(i, line, sample_i, sample_j);
+                    pixel_color += ray_color(ray, max_depth, world);
+                }
             }
-            pixel_color /= samples_per_pixel;
+            pixel_color /= std::pow(spp_sq, 2);
 
             auto rgba_color = to_gamma_color(pixel_color);
             pixels[i * 4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
@@ -200,5 +228,10 @@ public:
         Vec3 unit_direction = ray.direction().normalize();
         auto a = 0.5 * (unit_direction.y + 1.0);
         return ray_color * lerp(Colors::white, Colors::blue_sky, a);
+    }
+
+    void set_focus_dist(double dist) {
+        look_at = -dist * w + look_from;
+        update();
     }
 };
