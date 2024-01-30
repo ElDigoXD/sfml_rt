@@ -6,42 +6,41 @@
 
 #include "third-party/stb_image_write.h"
 #include "third-party/BS_thread_pool.h"
+#include "Scene.h"
+
+static const int image_width = 1920;
+static const int image_height = 1080;
+static unsigned char pixels[image_width * image_height * 4];
+static HittableList world;
+static Camera camera = Camera(image_width, image_height, static_cast<int>(std::pow(2, 2)), 10);
+
+static void render_pixel_line(int j) {
+    camera.render_pixel_line(&pixels[j * camera.image_width * 4], world, (int) j);
+}
 
 int main() {
-    auto image_width = 1920;
-    auto image_height = 1080;
-    auto camera_10 = Camera(image_width, image_height, 2, 100);
-    auto camera_100 = Camera(image_width, image_height, 20, 100);
-    auto camera_1000 = Camera(image_width, image_height, 1000, 100);
+    srand(1);
+    world = Scene::book_1_end(camera);
+    srand(time(nullptr));
 
-    HittableList world;
-    auto material_ground = std::make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
-    auto material_center = std::make_shared<Lambertian>(Color(0.7, 0.3, 0.3));
-    auto material_left = std::make_shared<Metal>(Color(0.8, 0.8, 0.8), 0.3);
-    auto material_right = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 1);
+    BS::thread_pool pool{std::thread::hardware_concurrency() - 1};
 
-    world.add(std::make_shared<Sphere>(Point3(0.0, -100.5, -1.0), 100.0, material_ground));
-    world.add(std::make_shared<Sphere>(Point3(0.0, 0.0, -1.0), 0.5, material_center));
-    world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), 0.5, material_left));
-    world.add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, material_right));
+    //for (auto threads: {6}) {
+    //    pool.reset(threads);
 
-    auto pixels = new unsigned char[image_width * image_height * 4];
+    auto start{std::chrono::steady_clock::now()};
 
-    BS::thread_pool pool{4};
+    pool.detach_loop(0, image_height, render_pixel_line, 50);
+    pool.wait();
 
-    for (auto threads: {6, 6, 6, 6}) {
-        pool.reset(threads);
-        auto start{std::chrono::steady_clock::now()};
+    auto end{std::chrono::steady_clock::now()};
+    std::chrono::duration<double, std::milli> duration = end - start;
+    printf("%d: %.1fms\n", pool.get_thread_count(), duration.count());
 
-        pool.detach_loop(0, image_height, [&camera_100, &world, &pixels](int j) {
-            camera_100.render_pixel_line(&pixels[j * camera_100.image_width * 4], world, (int) j);
-        }, 50);
-        pool.wait();
+    //}
 
-        auto end{std::chrono::steady_clock::now()};
-        std::chrono::duration<double, std::milli> duration = end - start;
-        printf("%d: %.1fms\n", threads, duration.count());
-    }
-
-    stbi_write_png("out.png", image_width, image_height, 4, pixels, 0);
+    stbi_write_png(
+            std::format("{}x{}_{}_{}_{}_{:.0f}ms.png", image_height, image_width, camera.samples_per_pixel,
+                        camera.max_depth,
+                        pool.get_thread_count(), duration.count()).c_str(), image_width, image_height, 4, pixels, 0);
 }
