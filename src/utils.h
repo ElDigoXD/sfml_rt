@@ -78,5 +78,19 @@ namespace ImGui {
                       ImGuiSliderFlags flags = 0) {
         return SliderScalar(label, ImGuiDataType_Double, v, &v_min, &v_max, format, flags);
     }
+
+    bool SliderDouble3(const char *label, double v[3], double v_min, double v_max, const char *format = "%.3f",
+                       ImGuiSliderFlags flags = 0) {
+        return SliderScalarN(label, ImGuiDataType_Double, v, 3, &v_min, &v_max, format, flags);
+    }
+
+    bool DragDouble(const char *label, double v[3], float speed, double v_min, double v_max, const char *format = "%.3f",
+                       ImGuiSliderFlags flags = 0) {
+        return DragScalar(label, ImGuiDataType_Double, v, speed, &v_min, &v_max, format, flags);
+    }
+    bool DragDouble3(const char *label, double v[3], float speed, double v_min, double v_max, const char *format = "%.3f",
+                     ImGuiSliderFlags flags = 0) {
+        return DragScalarN(label, ImGuiDataType_Double, v, 3, speed, &v_min, &v_max, format, flags);
+    }
 }
 #endif

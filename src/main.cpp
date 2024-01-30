@@ -12,6 +12,7 @@
 #include "Vec3.h"
 #include "Camera.h"
 #include "Material.h"
+#include "Scene.h"
 
 
 class GUI {
@@ -49,20 +50,19 @@ public:
     sf::Clock delta_clock;
     sf::Clock render_clock;
 
-    std::shared_ptr<Lambertian> material_ground;
-    std::shared_ptr<Dielectric> material_center;
-    std::shared_ptr<Dielectric> material_left;
-    std::shared_ptr<Metal> material_right;
-    std::shared_ptr<Normals> material_normals;
     std::shared_ptr<Sphere> look_at;
+
+    std::shared_ptr<Sphere> selected_hittable = nullptr;
 
     Color *colors_agg = new Color[max_window_width * max_window_height];
     Color *colors = new Color[max_window_width * max_window_height];
 
-    int pass_number{1};
+    int total_samples{0};
+    int next_samples_per_pixel{1};
     bool continuous_render;
 
-    int continuous_render_sample_limit;
+    int target_samples;
+    bool enable_camera_movement;
 
     sf::Vector2i before_click_mouse_position;
     sf::Vector2i before_move_mouse_position;
@@ -76,67 +76,13 @@ public:
         pool.reset(t_n);
         camera.samples_per_pixel = 10;
         camera.max_depth = 100;
-        camera.vfov = 20;
-        camera.look_from = {13, 2, 3};
-        camera.look_at = camera.look_from - unit_vector(camera.look_from) * 10;
-        camera.defocus_angle = 0.6;
-        camera.update();
         continuous_render = true;
-        continuous_render_sample_limit = 100;
+        enable_camera_movement = true;
+        target_samples = 2;
 
-        material_ground = std::make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
-        material_center = std::make_shared<Dielectric>(1.5);
-        material_left = std::make_shared<Dielectric>(1.5);
-        material_right = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 0);
-        material_normals = std::make_shared<Normals>();
-
-        world.add(std::make_shared<Sphere>(Point3(0.0, -100.5, -1.0), 100.0, material_ground));
-        world.add(std::make_shared<Sphere>(Point3(0.0, 0.0, -1.0), 0.5, material_center));
-        world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), 0.5, material_left));
-        world.add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), -0.4, material_left));
-        world.add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, material_right));
-        look_at = std::make_shared<Sphere>(camera.look_at, 0.2, material_normals);
         // world.add(look_at);
-        world = HittableList();
-        auto ground_material = std::make_shared<Lambertian>(Color(0.5, 0.5, 0.5));
-        world.add(make_shared<Sphere>(Point3(0, -1000, 0), 1000, ground_material));
-
-        for (int a = -11; a < 11; a++) {
-            for (int b = -11; b < 11; b++) {
-                auto choose_mat = Random::_double();
-                Point3 center(a + 0.9 * Random::_double(), 0.2, b + 0.9 * Random::_double());
-
-                if ((center - Point3(4, 0.2, 0)).length() > 0.9) {
-                    std::shared_ptr<Material> sphere_material;
-
-                    if (choose_mat < 0.8) {
-                        // diffuse
-                        auto albedo = Color::random() * Color::random();
-                        sphere_material = std::make_shared<Lambertian>(albedo);
-                        world.add(make_shared<Sphere>(center, 0.2, sphere_material));
-                    } else if (choose_mat < 0.95) {
-                        // metal
-                        auto albedo = Color::random(0.5, 1);
-                        auto fuzz = Random::_double(0, 0.5);
-                        sphere_material = std::make_shared<Metal>(albedo, fuzz);
-                        world.add(make_shared<Sphere>(center, 0.2, sphere_material));
-                    } else {
-                        // glass
-                        sphere_material = std::make_shared<Dielectric>(1.5);
-                        world.add(make_shared<Sphere>(center, 0.2, sphere_material));
-                    }
-                }
-            }
-        }
-
-        auto material1 = std::make_shared<Dielectric>(1.5);
-        world.add(make_shared<Sphere>(Point3(0, 1, 0), 1.0, material1));
-
-        auto material2 = std::make_shared<Lambertian>(Color(0.4, 0.2, 0.1));
-        world.add(make_shared<Sphere>(Point3(-4, 1, 0), 1.0, material2));
-
-        auto material3 = std::make_shared<Metal>(Color(0.7, 0.6, 0.5), 0.0);
-        world.add(make_shared<Sphere>(Point3(4, 1, 0), 1.0, material3));
+        world = Scene::book_1_end(camera);
+        look_at = std::make_shared<Sphere>(camera.look_at, 0.2, std::make_shared<Normals>());
     }
 
     void run() {
@@ -173,12 +119,26 @@ public:
                 } else if (event.type == sf::Event::MouseButtonPressed) {
                     if ((event.mouseButton.button == sf::Mouse::Left
                          || event.mouseButton.button == sf::Mouse::Right)
+                        && enable_camera_movement
                         && sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
                         && sf::Mouse::getPosition(window).x < image_width) {
-                        mouse_pressed = true;
-                        window.setMouseCursorVisible(false);
-                        before_click_mouse_position = sf::Mouse::getPosition(window);
-                        before_move_mouse_position = before_click_mouse_position;
+                        if (is_materials_tab_open) {
+                            auto ray = camera.get_ray_at(sf::Mouse::getPosition(window).x,
+                                                         sf::Mouse::getPosition(window).y);
+                            HitRecord record;
+                            for (const auto &hittable: world.objects) {
+                                if (hittable->hit(ray, Interval{0, INFINITY}, record)) {
+                                    selected_hittable = std::dynamic_pointer_cast<Sphere>(hittable);
+                                }
+                            }
+
+
+                        } else {
+                            mouse_pressed = true;
+                            window.setMouseCursorVisible(false);
+                            before_click_mouse_position = sf::Mouse::getPosition(window);
+                            before_move_mouse_position = before_click_mouse_position;
+                        }
                     }
                 } else if (event.type == sf::Event::MouseButtonReleased) {
                     if (mouse_pressed
@@ -190,6 +150,7 @@ public:
                     }
                 } else if (event.type == sf::Event::MouseWheelMoved
                            && window.hasFocus()
+                           && enable_camera_movement
                            &&
                            sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
                            && sf::Mouse::getPosition(window).x < image_width) {
@@ -209,12 +170,9 @@ public:
                     if (pool.get_tasks_total() == 0 && t_state != DONE) {
                         colors_to_pixel();
                         texture.update(pixels, image_width, image_height, 0, 0);
-                        pass_number++;
-                        if (pass_number * camera.samples_per_pixel < continuous_render_sample_limit) {
-                            if (pass_number == 10) {
-                                pass_number /= 2;
-                                camera.samples_per_pixel *= 2;
-                            }
+                        total_samples += camera.samples_per_pixel;
+                        camera.samples_per_pixel = next_samples_per_pixel;
+                        if (total_samples <= target_samples) {
                             pool.detach_loop(0U, image_height, [this](int j) {
                                 camera.render_color_line(&colors[j * camera.image_width], world, (int) j);
                             }, 50);
@@ -253,7 +211,7 @@ public:
 
     void start_render() {
         stop_render();
-        pass_number = 1;
+        total_samples = 1;
         render_clock.restart();
         memset(pixels, 0, max_window_width * max_window_height * 4);
 
@@ -272,7 +230,8 @@ public:
 
     void colors_to_pixel() {
         for (int i = 0; i < image_width * image_height; ++i) {
-            colors_agg[i] = (colors_agg[i] * (pass_number - 1) + colors[i]) / pass_number;
+            colors_agg[i] = (colors_agg[i] * (total_samples - 1) + colors[i] * camera.samples_per_pixel) /
+                            (total_samples - 1 + camera.samples_per_pixel);
             auto rgba_color = to_gamma_color(colors_agg[i]);
             pixels[i * 4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
             pixels[i * 4 + 1] = static_cast<unsigned char>(rgba_color.g * 255);
@@ -297,7 +256,6 @@ public:
                         new_look_at, Vec3(0, 1, 0), (delta.x) / 500.0);
 
                 camera.look_at = (camera.camera_center - new_look_at);
-
                 update_camera_and_start_render();
             }
         }
@@ -305,7 +263,7 @@ public:
 
     void handle_keyboard() {
         auto speed = 0.003 * dt.asMilliseconds();
-        if (!window.hasFocus()) return;
+        if (!window.hasFocus() || !enable_camera_movement) return;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
             auto displacement = speed * cross(Vec3(0, 1, 0), camera.u);
             camera.look_at += displacement;
@@ -359,6 +317,9 @@ public:
         start_render();
     }
 
+    bool enable_look_at = false;
+    bool is_materials_tab_open;
+
     void imgui() {
         ImGui::SFML::Update(window, dt);
         ImGuiWindowFlags window_flags = 0;
@@ -369,11 +330,13 @@ public:
 
         ImGui::GetStyle().WindowBorderSize = 0;
         ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        ImGui::PushItemWidth(-1.0f);
         ImGui::SetNextWindowPos({(float) (current_width - 200), 0});
         ImGui::SetNextWindowSize({200, (float) (current_height)});
         ImGui::SetNextWindowBgAlpha(1);
         ImGui::Begin("Hello, world!", nullptr, window_flags);
-        ImGui::BeginTabBar("aaaaaa");
+        ImGui::BeginTabBar("tab bar");
+
         if (ImGui::BeginTabItem("Render")) {
             ImGui::PushItemWidth(-1.0f);
             if (t_state == RENDERING) {
@@ -388,8 +351,8 @@ public:
 
             if (t_state == RENDERING) {
                 if (continuous_render) {
-                    ImGui::ProgressBar((float) pass_number * camera.samples_per_pixel /
-                                       continuous_render_sample_limit); // NOLINT(*-narrowing-conversions)
+                    ImGui::ProgressBar((float) (total_samples - 1) /
+                                       target_samples); // NOLINT(*-narrowing-conversions)
                 } else {
                     ImGui::ProgressBar((50.0f - (float) pool.get_tasks_total()) / 50);
                 }
@@ -404,39 +367,71 @@ public:
             ImGui::BeginDisabled(t_state == RENDERING);
             if (ImGui::Checkbox("Continuous render", &continuous_render)) {
                 if (continuous_render) {
-                    continuous_render_sample_limit = camera.samples_per_pixel;
+                    target_samples = camera.samples_per_pixel;
                 } else {
-                    camera.samples_per_pixel = continuous_render_sample_limit;
+                    camera.samples_per_pixel = target_samples;
                 }
             }
             ImGui::EndDisabled();
 
-            ImGui::BeginDisabled(continuous_render);
-            ImGui::Text("Render update:");
-            ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
-            ImGui::EndDisabled();
+            if (continuous_render) {
+                ImGui::Text("Samples per pixel:");
+                if (ImGui::SliderInt("##a", (int *) &next_samples_per_pixel, 1, 10000, "%d",
+                                     ImGuiSliderFlags_Logarithmic)) {
+                    int a = std::floor(std::sqrt(next_samples_per_pixel));
+                    int b = (int) std::pow(a, 2);
+                    int c = (int) std::pow(a + 1, 2);
+                    if (next_samples_per_pixel - b < c - next_samples_per_pixel)
+                        next_samples_per_pixel = b;
+                    else
+                        next_samples_per_pixel = c;
+                }
+            } else {
+                ImGui::Text("Render update:");
+                ImGui::SliderInt("##a", &render_update_ms, 1, 1000, "%dms");
+            }
 
+            ImGui::BeginDisabled(!continuous_render && t_state != IDLE);
             ImGui::Text("Render threads:");
             if (ImGui::SliderInt("##b", (int *) &t_n, 1, (int) std::thread::hardware_concurrency())) {
                 pool.reset(t_n);
             }
+            ImGui::EndDisabled();
 
             if (continuous_render) {
-                ImGui::Text("Stop at n samples:");
-                ImGui::SliderInt("##c", (int *) &continuous_render_sample_limit, 10, 10000, "%d",
-                                 ImGuiSliderFlags_Logarithmic);
+                ImGui::Text("Stop at samples:");
+                if (ImGui::SliderInt("##c", (int *) &target_samples, 1, 10000, "%d",
+                                     ImGuiSliderFlags_Logarithmic)) {
+                    int a = std::floor(std::sqrt(target_samples));
+                    int b = (int) std::pow(a, 2);
+                    int c = (int) std::pow(a + 1, 2);
+                    if (target_samples - b < c - target_samples)
+                        target_samples = b;
+                    else
+                        target_samples = c;
+                }
             } else {
                 ImGui::Text("Samples per pixel:");
-                ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
+                if (ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d",
+                                     ImGuiSliderFlags_Logarithmic)) {
+                    int a = std::floor(std::sqrt(camera.samples_per_pixel));
+                    int b = (int) std::pow(a, 2);
+                    int c = (int) std::pow(a + 1, 2);
+                    if (camera.samples_per_pixel - b < c - camera.samples_per_pixel)
+                        camera.samples_per_pixel = b;
+                    else
+                        camera.samples_per_pixel = c;
+                }
             }
 
             ImGui::Text("Ray depth:");
             ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
 
             ImGui::EndTabItem();
-    }
+        }
         if (ImGui::BeginTabItem("Camera")) {
-
+            ImGui::PushItemWidth(-1.0f);
+            ImGui::Checkbox("Enable camera movement", &enable_camera_movement);
             ImGui::Text("Fov:");
             if (ImGui::SliderDouble("##e", &camera.vfov, 1, 200)) {
                 camera.update();
@@ -449,31 +444,50 @@ public:
                 start_render();
             }
 
+            ImGui::Text("Look from:");
+            if (ImGui::DragDouble3("##from", camera.look_from.e, 0.1, -100, 100)) {
+                camera.update();
+                start_render();
+            };
+            ImGui::Text("Look at:");
+            if (ImGui::DragDouble3("##at", camera.look_at.e, 0.1, -100, 100)) {
+                camera.update();
+                start_render();
+            };
+
+
+            if (ImGui::Checkbox("Draw look at", &enable_look_at)) {
+                if (enable_look_at)
+                    world.objects.push_back(look_at);
+                else
+                    world.objects.pop_back();
+                start_render();
+            }
+
+
+            ImGui::Text("Focus distance:");
+            if (ImGui::DragDouble("##focus", &camera.focus_dist, 0.1, 0.1, 100, "%.3f", ImGuiSliderFlags_AlwaysClamp)) {
+                camera.set_focus_dist(camera.focus_dist);
+                update_camera_and_start_render();
+            };
+
             ImGui::EndTabItem();
         }
 
 
         ImGui::Separator();
-
-        bool re_render_on_material_change = true;
-        ImGui::Checkbox("Render on change", &re_render_on_material_change);
-        if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-            for (auto mat: std::map<std::string, Material *>{{"Left",   material_left.get()},
-                                                        {"Center", material_center.get()},
-                                                        {"Right",  material_right.get()}}) {
-                if (ImGui::TreeNode(mat.first.c_str())) {
-                    ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-                    if (imgui_mat(mat.second) & re_render_on_material_change) {
-                        start_render();
-                    }
-                    ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-                    ImGui::TreePop();
+        is_materials_tab_open = ImGui::BeginTabItem("Materials");
+        if (is_materials_tab_open) {
+            ImGui::PushItemWidth(-1.0f);
+            if (selected_hittable) {
+                if (imgui_mat((selected_hittable->material.get()))) {
+                    start_render();
                 }
             }
         }
         ImGui::Separator();
-        ImGui::Text("%dx%d %d samples, %4.0ffps", image_width, image_height, pass_number * camera.samples_per_pixel,
+        ImGui::Text("%dx%d %d samples, %4.0ffps", image_width, image_height,
+                    continuous_render ? total_samples - 1 : camera.samples_per_pixel,
                     1 / dt.asSeconds());
         ImGui::Text("Render: %dms",
                     t_state == RENDERING ? render_clock.getElapsedTime().asMilliseconds() : render_time);
@@ -483,7 +497,7 @@ public:
     }
 
     template<class T>
-    bool imgui_mat(T &material) {
+    bool imgui_mat(T material) {
         auto updated = false;
         if (auto *dielectric = dynamic_cast<Dielectric *>(material)) {
             if (ImGui::SliderDouble("Refraction index", &dielectric->refraction_index, 0.001, 5, "%.3f",
@@ -507,6 +521,28 @@ public:
                 lambertian->albedo = from_float_array(mat);
                 updated = true;
             }
+        }
+        int curr = 0;
+        if (ImGui::Combo("Ch", &curr, "Change material\0Lambertian\0Metal\0Dielectric\0Normals\0")) {
+            switch (curr) {
+                case 0:
+                    break;
+                case 1:
+                    selected_hittable->material = std::move(std::make_shared<Lambertian>(Colors::blue));
+                    break;
+                case 2:
+                    selected_hittable->material = std::move(std::make_shared<Metal>(Colors::blue, 0));
+                    break;
+                case 3:
+                    selected_hittable->material = std::move(std::make_shared<Dielectric>(1.5));
+                    break;
+                case 4:
+                    selected_hittable->material = std::move(std::make_shared<Normals>());
+                    break;
+                default:
+                    break;
+            }
+            updated = true;
         }
 
         return updated;

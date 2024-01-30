@@ -7,9 +7,9 @@
 class Sphere : public Hittable {
 private:
     double radius;
-    std::shared_ptr<Material> material;
     AABB bbox;
 public:
+    std::shared_ptr<Material> material;
     Point3 center;
     Sphere(Point3 _center, double _radious, std::shared_ptr<Material> _material) : center(_center), radius(_radious), material(std::move(_material)) {
         auto radius_vec = Vec3(radius, radius, radius);

@@ -14,6 +14,7 @@ add_executable(sfml_rt_exe #WIN32
         third-party/pcg_random/pcg_uint128.hpp
         AABB.h
         AABB.h
+        Scene.h
 )
 target_compile_definitions(sfml_rt_exe PRIVATE IS_SFML)
 
