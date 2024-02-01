@@ -5,6 +5,7 @@ set (CMAKE_CXX_STANDARD 23)
 add_compile_options(-fimplicit-constexpr -march=native)
 
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
+include(FindFreetype)
 
 if(CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)

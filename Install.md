@@ -24,6 +24,7 @@ sudo apt-get install ninja-build
 ```bash
 CMAKE_CXX_COMPILER=g++13
 sudo apt install libgl-dev libx11-dev libopengl-dev libglx-dev libudev-dev
+sudo apt install libxrandr-dev libxcursor-dev libfreetype-dev libfreetype6 libfreetype6-dev
 cmake -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B ./cmake-build-release
 
 ```

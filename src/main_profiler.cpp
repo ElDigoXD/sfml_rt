@@ -13,9 +13,11 @@ static const int image_height = 1080;
 static unsigned char pixels[image_width * image_height * 4];
 static HittableList world;
 static Camera camera = Camera(image_width, image_height, static_cast<int>(std::pow(2, 2)), 10);
+static int count = 0;
 
 static void render_pixel_line(int j) {
     camera.render_pixel_line(&pixels[j * camera.image_width * 4], world, (int) j);
+    std::clog << ++count << ' ' << std::flush;
 }
 
 int main() {

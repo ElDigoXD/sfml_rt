@@ -428,6 +428,7 @@ public:
             ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
 
             ImGui::EndTabItem();
+            ImGui::PopItemWidth();
         }
         if (ImGui::BeginTabItem("Camera")) {
             ImGui::PushItemWidth(-1.0f);
@@ -472,6 +473,7 @@ public:
             };
 
             ImGui::EndTabItem();
+            ImGui::PopItemWidth();
         }
 
 
@@ -484,7 +486,12 @@ public:
                     start_render();
                 }
             }
+
+            ImGui::EndTabItem();
+            ImGui::PopItemWidth();
         }
+        ImGui::EndTabBar();
+
         ImGui::Separator();
         ImGui::Text("%dx%d %d samples, %4.0ffps", image_width, image_height,
                     continuous_render ? total_samples - 1 : camera.samples_per_pixel,
