@@ -31,7 +31,7 @@ public:
         z = {a.z, b.z};
     }
 
-    [[nodiscard]] bool hit_0(const Ray &r, Interval ray_t) const {
+    bool hit_0(const Ray &r, Interval ray_t) const {
         for (int i = 0; i < 3; ++i) {
             auto t0 = std::min(
                 (index(i).min - r.origin()[i]) / r.direction()[i],
@@ -48,7 +48,7 @@ public:
         return true;
     }
 
-    [[nodiscard]] bool hit(const Ray &r, Interval ray_t) const {
+    bool hit(const Ray &r, Interval ray_t) const {
         for (int i = 0; i < 3; i++) {
             const auto invD = 1 / r.direction()[i];
             const auto orig = r.origin()[i];

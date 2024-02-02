@@ -41,8 +41,9 @@ int main() {
 
     //}
 
-    stbi_write_png(
-            string_format("cpu_%dx%d_%d_%d_%d_%.0fms.png", image_height, image_width, camera.samples_per_pixel,
-                          camera.max_depth,
-                          pool.get_thread_count(), duration.count()).c_str(), image_width, image_height, 4, pixels, 0);
+    auto out = string_format("gpu_%dx%d_%d_%d_%d_%.0fms.png", image_height, image_width, camera.samples_per_pixel,
+                        camera.max_depth,
+                        pool.get_thread_count(), duration.count());
+
+    stbi_write_png(out.c_str(), image_width, image_height, 4, pixels, 0);
 }

@@ -11,7 +11,7 @@ private:
 public:
     std::shared_ptr<Material> material;
     Point3 center;
-    Sphere(Point3 _center, double _radius, std::shared_ptr<Material> _material) : center(_center), radius(_radius), material(std::move(_material)) {
+    Sphere(Point3 _center, double _radious, std::shared_ptr<Material> _material) : center(_center), radius(_radious), material(std::move(_material)) {
         auto radius_vec = Vec3(radius, radius, radius);
         bbox = AABB(center - radius_vec, center + radius_vec);
     }

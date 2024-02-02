@@ -1,4 +1,7 @@
-add_executable(sfml_rt_exe #WIN32
+
+add_subdirectory(third-party)
+
+add_executable(sfml_rt_exe
         main.cpp
         Vec3.h
         Ray.h
@@ -9,14 +12,20 @@ add_executable(sfml_rt_exe #WIN32
         utils.h
         Material.h
         third-party/BS_thread_pool.h
-        third-party/pcg_random/pcg_random.hpp
-        third-party/pcg_random/pcg_extras.hpp
-        third-party/pcg_random/pcg_uint128.hpp
         AABB.h
         AABB.h
         Scene.h
 )
 target_compile_definitions(sfml_rt_exe PRIVATE IS_SFML)
+
+set_target_properties(sfml_rt_exe PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
+
+target_link_libraries(sfml_rt_exe
+        PRIVATE
+        ImGui-SFML::ImGui-SFML
+)
+
 
 add_executable(sfml_rt_profiler_exe #WIN32
         main_profiler.cpp
@@ -30,22 +39,18 @@ add_executable(sfml_rt_profiler_exe #WIN32
         Material.h
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
-        third-party/pcg_random/pcg_random.hpp
-        third-party/pcg_random/pcg_extras.hpp
-        third-party/pcg_random/pcg_uint128.hpp
         AABB.h
 )
 target_compile_definitions(sfml_rt_profiler_exe PRIVATE PROFILE)
+
+set_target_properties(sfml_rt_profiler_exe PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
 
 # target_link_libraries(sfml_rt_profiler_exe
 #         PRIVATE
 #         ImGui-SFML::ImGui-SFML
 # )
 
-target_link_libraries(sfml_rt_exe
-        PRIVATE
-        ImGui-SFML::ImGui-SFML
-)
 
 
 if (WIN32)

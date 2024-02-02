@@ -1,15 +1,7 @@
 include(FetchContent)
-set(SFML_VERSION 2.6.1)
 set(IMGUI_VERSION 1.90.1)
 set(IMGUI_SFML_VERSION 2.6)
 
-FetchContent_Declare(
-        sfml
-        GIT_REPOSITORY "https://github.com/SFML/SFML"
-        GIT_TAG 69ea0cd863aed1d4092b970b676924a716ff718b # 2.6.1
-)
-
-add_subdirectory(sfml)
 
 FetchContent_Declare(
         imgui

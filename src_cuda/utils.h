@@ -4,23 +4,27 @@
 #include <limits>
 #include <cstdint>
 #include <random>
+#include <numbers>
 #include <memory>
 
 constexpr static const double infinity = std::numeric_limits<double>::infinity();
+
+
+template<typename ... Args>
+std::string string_format( const std::string& format, Args ... args )
+{
+    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
+    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+    auto size = static_cast<size_t>( size_s );
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::snprintf( buf.get(), size, format.c_str(), args ... );
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
 
 double degrees_to_radians(double degrees) {
     return degrees * std::numbers::pi / 180.0;
 }
 
-template<typename ... Args>
-std::string string_format(const std::string &format, Args ... args) {
-    int size_s = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
-    if (size_s <= 0) { throw std::runtime_error("Error during formatting."); }
-    auto size = static_cast<size_t>( size_s );
-    std::unique_ptr<char[]> buf(new char[size]);
-    std::snprintf(buf.get(), size, format.c_str(), args ...);
-    return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
-}
 
 namespace Random {
     static thread_local unsigned int rng_state = std::rand();
