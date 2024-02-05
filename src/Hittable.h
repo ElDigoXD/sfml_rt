@@ -35,13 +35,13 @@ public:
 class HittableList : public Hittable {
     AABB bbox;
 public:
-    std::vector<std::shared_ptr<Hittable>> objects;
+    std::vector<Hittable> objects;
 
     HittableList() = default;
 
-    explicit HittableList(const std::shared_ptr<Hittable> &_object) { add(_object); }
+    explicit HittableList(const Hittable &_object) { add(_object); }
 
-    void add(const std::shared_ptr<Hittable>& object) {
+    void add(const Hittable& object) {
         objects.push_back(object);
         bbox = AABB(bbox, object->bounding_box());
     }

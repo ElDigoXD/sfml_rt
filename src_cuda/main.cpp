@@ -50,9 +50,9 @@ public:
     sf::Clock delta_clock;
     sf::Clock render_clock;
 
-    std::shared_ptr<Sphere> look_at;
+    Sphere look_at;
 
-    std::shared_ptr<Sphere> selected_hittable = nullptr;
+    Sphere selected_hittable = nullptr;
 
     Color *colors_agg = new Color[max_window_width * max_window_height];
     Color *colors = new Color[max_window_width * max_window_height];

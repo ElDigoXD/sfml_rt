@@ -2,8 +2,7 @@
 
 #include "Vec3.h"
 #include "Ray.h"
-#include "Sphere.h"
-#include "Material.h"
+#include "HittableList.h"
 #include <iostream>
 #include <random>
 #include <cstring>
@@ -17,15 +16,14 @@ public:
     int max_depth;
     double vfov{90};
 
-    Point3 look_from = Point3(0, 0, -1);
-    Point3 look_at = Point3(0, 0, 0);
+    Point3 look_from = Point3(0, 0, 0);
+    Point3 look_at = Point3(0, 0, -1);
 
     Vec3 u, v, w;
 
     Point3 camera_center;
 
-    double defocus_angle = 10;
-    double focus_dist = 3.4;
+    double defocus_angle = 0;
 
 private:
 
@@ -49,27 +47,27 @@ private:
 
 
 public:
-    Camera() : Camera(600, 400) {}
+    __host__ __device__ Camera() : Camera(600, 400) {}
 
-    Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 100) {}
+    __host__ __device__ Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 100) {}
 
-    Camera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
+    __host__ __device__ Camera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
             : image_width(_image_width),
               image_height(_image_height),
               samples_per_pixel(_samples_per_pixel),
               max_depth(_max_depth) {
-        update(image_width, image_height);
+        update();
     }
 
-    void update() { update(image_width, image_height); }
+    __host__ __device__ void update() { update(image_width, image_height); }
 
-    void update(int width, int height) {
+    __host__ __device__ void update(int width, int height) {
         image_width = width;
         image_height = height;
 
         camera_center = look_from;
 
-        focus_dist = (look_from - look_at).length();
+        auto focus_dist = (look_from - look_at).length();
         auto theta = degrees_to_radians(vfov);
         auto h = tan(theta / 2);
 
@@ -95,7 +93,7 @@ public:
         defocus_disk_y = v * defocus_radius;
     }
 
-    Ray get_random_ray_at(int i, int j) {
+    __host__ Ray get_random_ray_at(int i, int j) {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto pixel_sample = pixel_center + pixel_sample_square();
 
@@ -103,6 +101,17 @@ public:
 
         return Ray(ray_origin, pixel_sample - ray_origin);
     }
+
+    __device__ Ray get_random_ray_at(int i, int j, curandState *rand) {
+        auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
+        auto pixel_sample = pixel_center + pixel_sample_square(rand);
+
+        auto ray_origin = (defocus_angle <= 0) ? camera_center : defocus_disk_sample(rand);
+        //auto ray_origin = camera_center;
+
+        return Ray(ray_origin, pixel_sample - ray_origin);
+    }
+
 
     Ray get_random_ray_at_subpixel(int i, int j, int sub_i, int sub_j) {
         auto subpixel_center =
@@ -116,25 +125,35 @@ public:
     }
 
 
-    Ray get_ray_at(int i, int j) {
+    __host__ __device__ Ray get_ray_at(int i, int j) {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto ray_origin = camera_center;
 
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
-    [[nodiscard]] Vec3 pixel_sample_square() const {
-        return (-0.5 + Random::generate_canonical()) * pixel_delta_x +
-               (-0.5 + Random::generate_canonical()) * pixel_delta_y;
+    [[nodiscard]] __host__ Vec3 pixel_sample_square() const {
+        return (-0.5 + Random::_double()) * pixel_delta_x +
+               (-0.5 + Random::_double()) * pixel_delta_y;
+    }
+
+    [[nodiscard]] __device__ Vec3 pixel_sample_square(curandState *rand) const {
+        return (-0.5 + Random::_double(rand)) * pixel_delta_x +
+               (-0.5 + Random::_double(rand)) * pixel_delta_y;
     }
 
     [[nodiscard]] Vec3 subpixel_sample_square() const {
-        return (-0.5 + Random::generate_canonical()) * subpixel_delta_x +
-               (-0.5 + Random::generate_canonical()) * subpixel_delta_y;
+        return (-0.5 + Random::_double()) * subpixel_delta_x +
+               (-0.5 + Random::_double()) * subpixel_delta_y;
     }
 
-    [[nodiscard]] Point3 defocus_disk_sample() const {
+    [[nodiscard]]__host__ Point3 defocus_disk_sample() const {
         auto p = random_in_unit_disk();
+        return camera_center + p.x * defocus_disk_x + p.y * defocus_disk_y;
+    }
+
+    [[nodiscard]] __device__ Point3 defocus_disk_sample(curandState *rand) const {
+        auto p = random_in_unit_disk(rand);
         return camera_center + p.x * defocus_disk_x + p.y * defocus_disk_y;
     }
 
@@ -180,7 +199,7 @@ public:
         }
     }
 
-    static Color lerp(Color start, Color end, double a) {
+    __host__ __device__ static Color lerp(Color start, Color end, double a) {
         return (1 - a) * start + a * end;
     }
 
@@ -190,7 +209,7 @@ public:
         HitRecord record;
 
         if (depth <= 0)
-            return (Colors::black);
+            return (Colors::black());
 
         if (world.hit(ray, Interval(0.001, infinity), record)) {
             Ray scattered_ray;
@@ -198,35 +217,60 @@ public:
             if (record.material->scatter(ray, record, attenuation, scattered_ray)) {
                 return attenuation * ray_color_recursive(scattered_ray, depth - 1, world);
             };
-            return Colors::black;
+            return Colors::black();
         }
 
         Vec3 unit_direction = ray.direction().normalize();
         auto a = 0.5 * (unit_direction.y + 1.0);
-        return lerp(Colors::white, Colors::blue_sky, a);
+        return lerp(Colors::white(), Colors::blue_sky(), a);
     }
 
-    static Color ray_color(Ray &ray, int depth, const Hittable &world) {
+    __host__ static Color ray_color(Ray &ray, int depth, const HittableList &world) {
         HitRecord record;
         Color attenuation;
         Color ray_color{1, 1, 1};
 
         if (depth <= 0)
-            return (Colors::black);
+            return {0,0,0};
 
         while (world.hit(ray, Interval(0.001, infinity), record)) {
             if (depth-- <= 0) {
-                return (Colors::black);
-            } else if (record.material->scatter(ray, record, attenuation, ray)) {
+                return {0, 0, 0};
+            }
+            if (record.material->scatter(ray, record, attenuation, ray)) {
                 ray_color = ray_color * attenuation;
             } else {
-                return Colors::black;
+                return {0,0,0};
             }
         }
 
         Vec3 unit_direction = ray.direction().normalize();
         auto a = 0.5 * (unit_direction.y + 1.0);
-        return ray_color * lerp(Colors::white, Colors::blue_sky, a);
+        return ray_color * lerp({1, 1, 1}, {0.5, 0.7, 1}, a);
+    }
+
+    __device__ static Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) {
+        HitRecord record;
+        Color attenuation;
+        Color ray_color{1, 1, 1};
+        Ray rec_ray = ray;
+        Ray scattered_ray;
+
+        while ((*world)->hit(rec_ray, Interval(0.001, infinity), record)) {
+            if (depth-- <= 0) {
+                return {0,0,0};
+            }
+            if (record.material->scatter(rec_ray, record, attenuation, scattered_ray, rand)) {
+                ray_color = ray_color * attenuation;
+                rec_ray = scattered_ray;
+            } else {
+                return {0,0,0};
+            }
+        }
+
+        Vec3 unit_direction = rec_ray.direction().normalize();
+        auto a = 0.5 * (unit_direction.y + 1.0);
+        return ray_color * lerp(Colors::white(), Colors::blue_sky(), a);
     }
 
     void set_focus_dist(double dist) {

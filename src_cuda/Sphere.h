@@ -1,22 +1,25 @@
 #pragma once
 
-#include <utility>
 
+#include "Material.h"
 #include "Hittable.h"
+#include "Vec3.h"
 
-class Sphere : public Hittable {
+class Sphere: public Hittable {
 private:
     double radius;
     AABB bbox;
 public:
-    std::shared_ptr<Material> material;
+    Material *material;
     Point3 center;
-    Sphere(Point3 _center, double _radious, std::shared_ptr<Material> _material) : center(_center), radius(_radious), material(std::move(_material)) {
+
+    __host__ __device__ Sphere(Point3 _center, double _radius, Material *_material) : center(_center), radius(_radius),
+                                                                  material(_material) {
         auto radius_vec = Vec3(radius, radius, radius);
         bbox = AABB(center - radius_vec, center + radius_vec);
     }
 
-    bool hit(const Ray &ray, Interval interval, HitRecord &record) const override {
+    __host__ __device__ bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
         //if (!bbox.hit(ray, interval)) return false;
         Vec3 oc = ray.origin() - center;
         auto a = ray.direction().length_squared();
@@ -48,7 +51,7 @@ public:
         return true;
     }
 
-    [[nodiscard]] AABB bounding_box() const override {
-        return bbox;
-    }
+    // [[nodiscard]]__host__ __device__ AABB bounding_box() const override {
+    //     return bbox;
+    // }
 };

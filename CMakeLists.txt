@@ -15,7 +15,7 @@ set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
 set(CMAKE_CUDA_ARCHITECTURES "native")
 set(USE_NATIVE_ARCH)
 
-set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-Xcompiler -march=native -Xcompiler --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/12")
+set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "--generate-line-info -Xcompiler -march=native -Xcompiler --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/12 --diag-suppress 549 --diag-suppress 177")
 
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 #include(FindFreetype)

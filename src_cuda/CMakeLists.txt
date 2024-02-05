@@ -1,16 +1,17 @@
 add_executable(p_exe
-        main_profiler.cu
-        Vec3.h
-        Ray.h
+        AABB.h
         Camera.h
         Hittable.h
-        Sphere.h
+        HittableList.h
         Interval.h
-        utils.h
         Material.h
+        Ray.h
+        Sphere.h
+        Vec3.h
+        main_profiler.cu
+        utils.h
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
-        AABB.h
 )
 
 set_target_properties(p_exe PROPERTIES
@@ -34,6 +35,7 @@ add_executable(gui_exe
         AABB.h
         AABB.h
         Scene.h
+        HittableList.h
 )
 
 target_compile_definitions(gui_exe PRIVATE IS_SFML)

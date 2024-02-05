@@ -4,25 +4,25 @@
 
 class Interval {
 public:
-    double min, max;
+    double min_, max_;
 
-    Interval() : min(+infinity), max(-infinity) {}
+    __host__ __device__ Interval() : min_(+infinity), max_(-infinity) {}
 
-    Interval(double _min, double _max) : min(_min), max(_max) {}
+    __host__ __device__ Interval(double _min, double _max) : min_(_min), max_(_max) {}
 
-    Interval(const Interval& a, const Interval& b):min(std::min(a.min, b.min)), max(std::max(a.max, b.max)){}
+    __host__ __device__ Interval(const Interval& a, const Interval& b): min_(min(a.min_, b.min_)), max_(max(a.max_, b.max_)){}
 
-    [[nodiscard]] bool contains(double x) const {
-        return min <= x && x <= max;
+    [[nodiscard]] __host__ __device__ bool contains(double x) const {
+        return min_ <= x && x <= max_;
     }
 
-    [[nodiscard]] bool surrounds(double x) const {
-        return min < x && x < max;
+    [[nodiscard]] __host__ __device__ bool surrounds(double x) const {
+        return min_ < x && x < max_;
     }
 
-    [[nodiscard]] double clamp(double x) const {
-        if (x < min) return min;
-        if (x > max) return max;
+    [[nodiscard]] __host__ __device__ double clamp(double x) const {
+        if (x < min_) return min_;
+        if (x > max_) return max_;
         return x;
     }
 

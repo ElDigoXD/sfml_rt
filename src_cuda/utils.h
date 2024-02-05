@@ -6,37 +6,51 @@
 #include <random>
 #include <numbers>
 #include <memory>
+#include <iostream>
+
+
+#define CU(val) check_cuda( (val), #val, __FILE__, __LINE__ )
+
+void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
+    if (result) {
+        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
+                  file << ":" << line << " '" << func << "' \n";
+        // Make sure we call CUDA Device Reset before exiting
+        cudaDeviceReset();
+        exit(99);
+    }
+}
 
 constexpr static const double infinity = std::numeric_limits<double>::infinity();
 
 
 template<typename ... Args>
-std::string string_format( const std::string& format, Args ... args )
-{
-    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
-    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+std::string string_format(const std::string &format, Args ... args) {
+    int size_s = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+    if (size_s <= 0) { throw std::runtime_error("Error during formatting."); }
     auto size = static_cast<size_t>( size_s );
-    std::unique_ptr<char[]> buf( new char[ size ] );
-    std::snprintf( buf.get(), size, format.c_str(), args ... );
-    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+    std::unique_ptr<char[]> buf(new char[size]);
+    std::snprintf(buf.get(), size, format.c_str(), args ...);
+    return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 }
 
-double degrees_to_radians(double degrees) {
+__host__ __device__ double degrees_to_radians(double degrees) {
     return degrees * std::numbers::pi / 180.0;
 }
 
 
 namespace Random {
+
     static thread_local unsigned int rng_state = std::rand();
 
-    static unsigned int rand_pcg() {
+    __host__ static unsigned int rand_pcg() {
         unsigned int state = rng_state;
         rng_state = rng_state * 747796405u + 2891336453u;
         unsigned int word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
         return (word >> 22u) ^ word;
     }
 
-    static inline unsigned int XOrShift32() {
+    __host__ static inline unsigned int XOrShift32() {
         unsigned int x = rng_state;
         x ^= x << 13;
         x ^= x >> 17;
@@ -45,19 +59,24 @@ namespace Random {
         return x;
     }
 
-    static double generate_canonical() {
-#ifdef _WIN32
+    __host__ double generate_canonical() {
         return std::rand() / (RAND_MAX + 1.0); // NOLINT(*-msc50-cpp)
-#endif
-#ifdef __linux__
-#endif
-        return rand_pcg() / (std::numeric_limits<uint32_t>::max() + 1.0);
-        return XOrShift32() / (std::numeric_limits<uint32_t>::max() + 1.0);
+        //return rand_pcg() / (std::numeric_limits<uint32_t>::max() + 1.0);
+        //return XOrShift32() / (std::numeric_limits<uint32_t>::max() + 1.0);
     }
 
-    static double _double() { return generate_canonical(); }
+    __host__ double _double() { return generate_canonical(); }
 
-    static double _double(double min, double max) { return min + (max - min) * _double(); }
+    __device__ double _double(curandState *rand) {
+        return -curand_uniform_double(rand) + 1;
+    }
+
+    __host__ double _double(double min, double max) { return min + (max - min) * _double(); }
+
+    __device__ double _double(double min, double max, curandState *rand) {
+        return min + (max - min) * _double(rand);
+    }
+
 }
 
 #ifdef IS_SFML
