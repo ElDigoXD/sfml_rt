@@ -3,6 +3,7 @@
 #include <cmath>
 #include <curand_kernel.h>
 #include "utils.h"
+#include "Interval.h"
 
 class Vec3 {
 public:
@@ -61,14 +62,16 @@ public:
         return (fabs(x) < 1e-8) && (fabs(y) < 1e-8) && (fabs(z) < 1e-8);
     }
 
-    __host__ static Vec3 random() { return {Random::_double(), Random::_double(), Random::_double()}; }
-    __device__ static Vec3 random(curandState *rand) { return {Random::_double(rand), Random::_double(rand), Random::_double(rand)}; }
-
-    __host__ static Vec3 random(double min, double max) {
-        return {Random::_double(min, max), Random::_double(min, max), Random::_double(min, max)};
+    [[nodiscard]] __host__ __device__ Vec3 clamp(double a, double b) const {
+        Interval i(a, b);
+        return {i.clamp(x), i.clamp(y), i.clamp(z)};
     }
 
-    __device__ static Vec3 random(double min, double max, curandState *rand) {
+    __host__ __device__ static Vec3 random(curandState *rand) {
+        return {Random::_double(rand), Random::_double(rand), Random::_double(rand)};
+    }
+
+    __host__ __device__ static Vec3 random(double min, double max, curandState *rand) {
         return {Random::_double(min, max, rand), Random::_double(min, max, rand), Random::_double(min, max, rand)};
     }
 
@@ -101,16 +104,8 @@ __host__ __device__ Vec3 unit_vector(Vec3 v) { return v / v.length(); }
 
 __host__ __device__ Vec3 Vec3::normalize() { return unit_vector(*this); }
 
-__host__ Vec3 random_in_unit_sphere() {
-    while (true) {
-        auto p = Vec3::random(-1, 1);
-        if (p.length_squared() < 1) {
-            return p;
-        }
-    }
-}
 
-__device__ Vec3 random_in_unit_sphere(curandState *rand) {
+__host__ __device__ Vec3 random_in_unit_sphere(curandState *rand) {
     Vec3 p;
     do {
         p = Vec3::random(-1, 1, rand);
@@ -128,7 +123,7 @@ __host__ Vec3 random_in_unit_disk() {
     }
 }
 
-__device__ Vec3 random_in_unit_disk(curandState *rand) {
+__host__ __device__ Vec3 random_in_unit_disk(curandState *rand) {
     while (true) {
         auto p = Vec3{Random::_double(-1, 1, rand), Random::_double(-1, 1, rand), 0};
         if (p.length_squared() < 1) {
@@ -137,15 +132,15 @@ __device__ Vec3 random_in_unit_disk(curandState *rand) {
     }
 }
 
-__host__  Vec3 random_unit_vector() { return random_in_unit_sphere().normalize(); }
 
-__device__ Vec3 random_unit_vector(curandState *rand) { return random_in_unit_sphere(rand).normalize(); }
+__host__ __device__ Vec3 random_unit_vector(curandState *rand) { return random_in_unit_sphere(rand).normalize(); }
 
+/*
 __host__  Vec3 random_on_hemisphere(const Vec3 &normal) {
     Vec3 vec = random_unit_vector();
     return dot(vec, normal) > 0.0 ? vec : -vec;
 }
-
+*/
 __host__ __device__ Vec3 reflect(const Vec3 &v, const Vec3 &n) {
     return v - 2 * dot(v, n) * n;
 }

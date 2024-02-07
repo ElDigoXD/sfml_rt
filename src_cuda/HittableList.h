@@ -26,6 +26,16 @@ public:
             }
         }
         return hit;
+    }
 
+    [[nodiscard]] __host__ __device__ bool hit2(const Ray &ray) const {
+        const Interval interval(0.0001, infinity);
+        HitRecord record;
+        for (int i = 0; i < list_size; i++) {
+            if (list[i]->hit(ray, interval, record)) {
+                return true;
+            }
+        }
+        return false;
     }
 };

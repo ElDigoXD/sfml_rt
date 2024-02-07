@@ -104,16 +104,7 @@ public:
         defocus_disk_y = v * defocus_radius;
     }
 
-    __host__ Ray get_random_ray_at(int i, int j) const {
-        auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
-        auto pixel_sample = pixel_center + pixel_sample_square();
-
-        auto ray_origin = (defocus_angle <= 0) ? camera_center : defocus_disk_sample();
-
-        return Ray(ray_origin, pixel_sample - ray_origin);
-    }
-
-    __device__ Ray get_random_ray_at(int i, int j, curandState *rand) const {
+    __host__ __device__ Ray get_random_ray_at(int i, int j, curandState *rand) const {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto pixel_sample = pixel_center + pixel_sample_square(rand);
 
@@ -123,7 +114,7 @@ public:
         return Ray(ray_origin, pixel_sample - ray_origin);
     }
 
-
+/*
     Ray get_random_ray_at_subpixel(int i, int j, int sub_i, int sub_j) {
         auto subpixel_center =
                 viewport_upper_left + i * pixel_delta_x + j * pixel_delta_y + sub_i * subpixel_delta_x +
@@ -134,8 +125,7 @@ public:
 
         return Ray(ray_origin, pixel_sample - ray_origin);
     }
-
-
+*/
     __host__ __device__ Ray get_ray_at(int i, int j) {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto ray_origin = camera_center;
@@ -143,12 +133,7 @@ public:
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
-    [[nodiscard]] __host__ Vec3 pixel_sample_square() const {
-        return (-0.5 + Random::_double()) * pixel_delta_x +
-               (-0.5 + Random::_double()) * pixel_delta_y;
-    }
-
-    [[nodiscard]] __device__ Vec3 pixel_sample_square(curandState *rand) const {
+    [[nodiscard]] __host__ __device__ Vec3 pixel_sample_square(curandState *rand) const {
         return (-0.5 + Random::_double(rand)) * pixel_delta_x +
                (-0.5 + Random::_double(rand)) * pixel_delta_y;
     }
@@ -158,31 +143,26 @@ public:
                (-0.5 + Random::_double()) * subpixel_delta_y;
     }
 
-    [[nodiscard]]__host__ Point3 defocus_disk_sample() const {
-        auto p = random_in_unit_disk();
-        return camera_center + p.x * defocus_disk_x + p.y * defocus_disk_y;
-    }
-
-    [[nodiscard]] __device__ Point3 defocus_disk_sample(curandState *rand) const {
+    [[nodiscard]] __host__ __device__ Point3 defocus_disk_sample(curandState *rand) const {
         auto p = random_in_unit_disk(rand);
         return camera_center + p.x * defocus_disk_x + p.y * defocus_disk_y;
     }
 
-    void render(unsigned char pixels[], const HittableList &world) {
+    void render(unsigned char pixels[], HittableList **world) {
         for (int j = 0; j < image_height; ++j) {
             render_pixel_line(&pixels[j * image_width * 4], world, j);
         }
     }
 
-    void render_pixel_line(unsigned char pixels[], const HittableList &world, int line) const {
+    void render_pixel_line(unsigned char pixels[], HittableList **world, int line) const {
 
         for (int i = 0; i < image_width; ++i) {
             Color pixel_color = Color(0, 0, 0);
 
             for (int sample = 0; sample < samples_per_pixel; ++sample) {
 
-                    Ray ray = get_random_ray_at(i, line);
-                    pixel_color += ray_color(ray, max_depth, world);
+                Ray ray = get_random_ray_at(i, line, nullptr);
+                pixel_color += ray_color(ray, max_depth, world, nullptr);
             }
             pixel_color /= samples_per_pixel;
 
@@ -194,12 +174,12 @@ public:
         }
     }
 
-    void render_color_line(Color pixels[], const HittableList &world, int line) {
+    void render_color_line(Color pixels[], HittableList **world, int line) {
         for (int i = 0; i < image_width; ++i) {
             Color pixel_color = Color(0, 0, 0);
             for (int sample = 0; sample < samples_per_pixel; ++sample) {
-                Ray ray = get_random_ray_at(i, line);
-                pixel_color += ray_color(ray, max_depth, world);
+                Ray ray = get_random_ray_at(i, line, nullptr);
+                pixel_color += ray_color(ray, max_depth, world, nullptr);
             }
             pixel_color /= samples_per_pixel;
             pixels[i] = pixel_color;
@@ -221,7 +201,7 @@ public:
         if (world.hit(ray, Interval(0.001, infinity), record)) {
             Ray scattered_ray;
             Color attenuation;
-            if (record.material->scatter(ray, record, attenuation, scattered_ray)) {
+            if (record.material->scatter(ray, record, attenuation, scattered_ray, nullptr)) {
                 return attenuation * ray_color_recursive(scattered_ray, depth - 1, world);
             };
             return Colors::black();
@@ -232,55 +212,46 @@ public:
         return lerp(Colors::white(), Colors::blue_sky(), a);
     }
 
-    __host__ static Color ray_color(Ray &ray, int depth, const HittableList &world) {
+    __host__ __device__ static Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) {
         HitRecord record;
         Color attenuation;
-        Color ray_color{1, 1, 1};
-        Ray rec_ray = ray;
-        Ray scattered_ray;
-
-        if (depth <= 0)
-            return {0, 0, 0};
-
-        while (world.hit(rec_ray, Interval(0.001, infinity), record)) {
-            if (depth-- <= 0) {
-                return {0, 0, 0};
-            }
-            if (record.material->scatter(rec_ray, record, attenuation, scattered_ray)) {
-                ray_color = ray_color * attenuation;
-                rec_ray = scattered_ray;
-            } else {
-                return {0, 0, 0};
-            }
-        }
-
-        Vec3 unit_direction = rec_ray.direction().normalize();
-        auto a = 0.5 * (unit_direction.y + 1.0);
-        return ray_color * lerp({1, 1, 1}, {0.5, 0.7, 1}, a);
-    }
-
-    __device__ static Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) {
-        HitRecord record;
-        Color attenuation;
-        Color ray_color{1, 1, 1};
+        Color global_color{1, 1, 1};
+        Color light_color{1, 1, 1};
+        Color total_color{1, 1, 1};
         Ray rec_ray = ray;
         Ray scattered_ray;
 
         while ((*world)->hit(rec_ray, Interval(0.001, infinity), record)) {
+            // Ray does not escape, so it's represented as black
             if (depth-- <= 0) {
                 return {0, 0, 0};
             }
+
+            HitRecord none;
+
+            // Ray scatters from the surface (not always in metal) and gets local light recursively.
             if (record.material->scatter(rec_ray, record, attenuation, scattered_ray, rand)) {
-                ray_color = ray_color * attenuation;
+                auto light = Point3(4, 3, 0);
+                auto light_ray = Ray(record.p, light - record.p);
+                // Light ray doesn't hit an object, so gets brighter.
+                if ((*world)->hit2(light_ray)) {
+                    light_color = {0, 0, 0};
+                } else {
+                    light_color = light_color * attenuation * Color{1, 1, 1} * dot(light_ray.direction().normalize(), record.normal);
+
+                };
+                global_color = global_color * attenuation;
+                total_color = total_color * (global_color*0.5 + light_color*0.5);
                 rec_ray = scattered_ray;
             } else {
                 return {0, 0, 0};
             }
         }
 
+        // Ray escapes and global illumination applies
         Vec3 unit_direction = rec_ray.direction().normalize();
         auto a = 0.5 * (unit_direction.y + 1.0);
-        return ray_color * lerp(Colors::white(), Colors::blue_sky(), a);
+        return (total_color * lerp(Colors::white(), Colors::blue_sky(), a)).clamp(0, 1);
     }
 
     void set_focus_dist(double dist) {

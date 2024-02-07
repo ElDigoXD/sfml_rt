@@ -22,10 +22,7 @@ class Material {
 public:
     virtual ~Material() = default;
 
-    __host__ virtual bool
-    scatter(Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray) const = 0;
-
-    __device__ virtual bool
+    __host__ __device__ virtual bool
     scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray, curandState *rand) const = 0;
 };
 
@@ -36,17 +33,7 @@ public:
 
     __host__ __device__ explicit Lambertian(const Color &_albedo) : albedo(_albedo) {}
 
-    __host__ bool scatter(Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray) const override {
-        auto scatter_direction = record.normal + random_unit_vector();
-        if (scatter_direction.is_near_zero())
-            scatter_direction = record.normal;
-
-        scattered_ray = Ray(record.p, scatter_direction);
-        attenuation = albedo;
-        return true;
-    }
-
-    __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
                             curandState *rand) const override {
         auto scatter_direction = record.normal + random_unit_vector(rand);
         if (scatter_direction.is_near_zero())
@@ -65,15 +52,7 @@ public:
 
     __host__ __device__ Metal(const Color &_albedo, double _fuzz) : albedo(_albedo), fuzz(_fuzz < 1 ? _fuzz : 1) {}
 
-    __host__ bool scatter(Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray) const override {
-        auto reflect_direction = reflect(ray_in.direction().normalize(), record.normal);
-
-        scattered_ray = Ray(record.p, reflect_direction + fuzz * random_unit_vector());
-        attenuation = albedo;
-        return (dot(scattered_ray.direction(), record.normal) > 0);
-    }
-
-    __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
                             curandState *rand) const override {
         auto reflect_direction = reflect(ray_in.direction().normalize(), record.normal);
 
@@ -89,27 +68,7 @@ public:
 
     __host__ __device__ explicit Dielectric(double _refraction_index) : refraction_index(_refraction_index) {}
 
-    __host__ bool scatter(Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray) const override {
-        attenuation = Colors::white();
-        double refraction_ratio = record.front_face ? (1.0 / refraction_index) : refraction_index;
-
-        Vec3 unit_direction = ray_in.direction().normalize();
-        double cos_theta = fmin(dot(-unit_direction, record.normal), 1.0);
-        double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
-
-        Vec3 direction;
-        if (refraction_ratio * sin_theta > 1 || reflectance(cos_theta, refraction_ratio) > Random::_double()) {
-            direction = reflect(ray_in.direction().normalize(), record.normal);
-        } else {
-            direction = refract(ray_in.direction().normalize(), record.normal, refraction_ratio);
-
-        }
-
-        scattered_ray = Ray(record.p, direction);
-        return true;
-    }
-
-    __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
                             curandState *rand) const override {
 
         attenuation = Colors::white();
@@ -145,17 +104,7 @@ class Normals : public Material {
 public:
     __host__ __device__ Normals() {};
 
-    __host__ bool scatter(Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray) const override {
-        auto scatter_direction = record.normal + random_unit_vector();
-        if (scatter_direction.is_near_zero())
-            scatter_direction = record.normal;
-
-        attenuation = 0.5 * (record.normal + Colors::white());
-        scattered_ray = {record.p, scatter_direction};
-        return true;
-    };
-
-    __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
                             curandState *rand) const override {
         auto scatter_direction = record.normal + random_unit_vector(rand);
         if (scatter_direction.is_near_zero())

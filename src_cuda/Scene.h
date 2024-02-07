@@ -101,7 +101,7 @@ namespace Scene {
     end_create_scene
 
     // Depends on seed
-    create_scene(ch14_what_next, (485))
+    create_scene(ch14_what_next, (22 * 22 + 1 + 3))
         auto idx = 0;
         d_list[idx++] = new Sphere(Point3(0, -1000, 0), 1000, new Lambertian(Color(0.5, 0.5, 0.5)));
         for (int a = -11; a < 11; a++) {
@@ -109,27 +109,24 @@ namespace Scene {
                 auto choose_mat = Random::_double(l_rand);
                 Point3 center(a + 0.9 * Random::_double(l_rand), 0.2, b + 0.9 * Random::_double(l_rand));
 
-                if ((center - Point3(4, 0.2, 0)).length() > 0.9) {
-                    Material *sphere_material;
+                Material *sphere_material;
 
-                    if (choose_mat < 0.8) {
-                        // diffuse
-                        auto albedo = Vec3::random(l_rand) * Vec3::random(l_rand);
-                        sphere_material = new Lambertian(albedo);
-                        d_list[idx++] = new Sphere(center, 0.2, sphere_material);
-                    } else if (choose_mat < 0.95) {
-                        // metal
-                        auto albedo = Color(0.5, 0.5, 0.5) + Vec3::random(l_rand) * 0.5;
-                        auto fuzz = 0.5 * Random::_double(l_rand);
-                        sphere_material = new Metal(albedo, fuzz);
-                        d_list[idx++] = new Sphere(center, 0.2, sphere_material);
-                    } else {
-                        // glass
-                        sphere_material = new Dielectric(1.5);
-                        d_list[idx++] = new Sphere(center, 0.2, sphere_material);
-                    }
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    auto albedo = Vec3::random(l_rand) * Vec3::random(l_rand);
+                    sphere_material = new Lambertian(albedo);
+                    d_list[idx++] = new Sphere(center, 0.2, sphere_material);
+                } else if (choose_mat < 0.95) {
+                    // metal
+                    auto albedo = Color(0.5, 0.5, 0.5) + Vec3::random(l_rand) * 0.5;
+                    auto fuzz = 0.5 * Random::_double(l_rand);
+                    sphere_material = new Metal(albedo, fuzz);
+                    d_list[idx++] = new Sphere(center, 0.2, sphere_material);
+                } else {
+                    // glass
+                    sphere_material = new Dielectric(1.5);
+                    d_list[idx++] = new Sphere(center, 0.2, sphere_material);
                 }
-
             }
         }
         auto material1 = new Dielectric(1.5);
@@ -141,7 +138,7 @@ namespace Scene {
         auto material3 = new Metal(Color(0.7, 0.6, 0.5), 0.0);
         d_list[idx++] = new Sphere(Point3(4, 1, 0), 1.0, material3);
 
-        assert(485 == idx);
+        assert(22 * 22 + 1 + 3 == idx);
         d_camera.vfov = 20;
         d_camera.look_from = {13, 2, 3};
         d_camera.look_at = d_camera.look_from - unit_vector(d_camera.look_from) * 10;
@@ -154,7 +151,7 @@ namespace Scene {
 namespace CPUScene {
     HittableList *book_1_end(Camera &d_camera) {
         auto idx = 0;
-        auto d_list = new Hittable *[485];
+        auto d_list = new Hittable *[22 * 22 + 1 + 3];
 
         d_list[idx++] = new Sphere(Point3(0, -1000, 0), 1000, new Lambertian(Color(0.5, 0.5, 0.5)));
         for (int a = -11; a < 11; a++) {
@@ -162,27 +159,24 @@ namespace CPUScene {
                 auto choose_mat = Random::_double();
                 Point3 center(a + 0.9 * Random::_double(), 0.2, b + 0.9 * Random::_double());
 
-                if ((center - Point3(4, 0.2, 0)).length() > 0.9) {
-                    Material *sphere_material;
+                Material *sphere_material;
 
-                    if (choose_mat < 0.8) {
-                        // diffuse
-                        auto albedo = Vec3::random() * Vec3::random();
-                        sphere_material = new Lambertian(albedo);
-                        d_list[idx++] = new Sphere(center, 0.2, sphere_material);
-                    } else if (choose_mat < 0.95) {
-                        // metal
-                        auto albedo = Color(0.5, 0.5, 0.5) + Vec3::random() * 0.5;
-                        auto fuzz = 0.5 * Random::_double();
-                        sphere_material = new Metal(albedo, fuzz);
-                        d_list[idx++] = new Sphere(center, 0.2, sphere_material);
-                    } else {
-                        // glass
-                        sphere_material = new Dielectric(1.5);
-                        d_list[idx++] = new Sphere(center, 0.2, sphere_material);
-                    }
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    auto albedo = Vec3::random(nullptr) * Vec3::random(nullptr);
+                    sphere_material = new Lambertian(albedo);
+                    d_list[idx++] = new Sphere(center, 0.2, sphere_material);
+                } else if (choose_mat < 0.95) {
+                    // metal
+                    auto albedo = Color(0.5, 0.5, 0.5) + Vec3::random(nullptr) * 0.5;
+                    auto fuzz = 0.5 * Random::_double();
+                    sphere_material = new Metal(albedo, fuzz);
+                    d_list[idx++] = new Sphere(center, 0.2, sphere_material);
+                } else {
+                    // glass
+                    sphere_material = new Dielectric(1.5);
+                    d_list[idx++] = new Sphere(center, 0.2, sphere_material);
                 }
-
             }
         }
         auto material1 = new Dielectric(1.5);
@@ -194,13 +188,13 @@ namespace CPUScene {
         auto material3 = new Metal(Color(0.7, 0.6, 0.5), 0.0);
         d_list[idx++] = new Sphere(Point3(4, 1, 0), 1.0, material3);
 
-        assert(485 == idx);
+        assert(22 * 22 + 1 + 3 == idx);
         d_camera.vfov = 20;
         d_camera.look_from = {13, 2, 3};
         d_camera.look_at = d_camera.look_from - unit_vector(d_camera.look_from) * 10;
         d_camera.defocus_angle = 0.6;
         d_camera.update();
 
-        return new HittableList(d_list, 485);
+        return new HittableList(d_list, 22 * 22 + 1 + 3);
     }
 }

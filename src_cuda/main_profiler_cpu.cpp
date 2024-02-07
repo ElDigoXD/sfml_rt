@@ -36,7 +36,6 @@ int main(int argc, char *argv[]) {
     HittableList *world;
     world = CPUScene::book_1_end(camera);
 
-    Random::rand = true;
 
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
 
@@ -45,8 +44,8 @@ int main(int argc, char *argv[]) {
 
     auto start = time(nullptr);
 
-    pool.detach_loop(0, image_height, [camera, &pixels, world](int j) {
-        camera.render_pixel_line(&pixels[j * camera.image_width * 4], *world, (int) j);
+    pool.detach_loop(0, image_height, [camera, &pixels, &world](int j) {
+        camera.render_pixel_line(&pixels[j * camera.image_width * 4], &world, (int) j);
     }, 50);
     pool.wait();
 

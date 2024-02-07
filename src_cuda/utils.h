@@ -47,7 +47,6 @@ namespace Random {
 
     static thread_local unsigned int rng_state = std::rand();
     static curandGenerator_t l_rand;
-    static bool rand = false;
 
     __host__ static unsigned int rand_pcg() {
         unsigned int state = rng_state;
@@ -72,8 +71,6 @@ namespace Random {
     }
 
     __host__ double generate_canonical() {
-        if (!rand)
-            return -rand_cuda() + 1;
         return std::rand() / (RAND_MAX + 1.0); // NOLINT(*-msc50-cpp)
         //return rand_pcg() / (std::numeric_limits<uint32_t>::max() + 1.0);
         //return XOrShift32() / (std::numeric_limits<uint32_t>::max() + 1.0);
@@ -81,16 +78,19 @@ namespace Random {
 
     __host__ double _double() { return generate_canonical(); }
 
-    __device__ double _double(curandState *rand) {
+    __host__ __device__ double _double(curandState *rand) {
+#ifdef __CUDA_ARCH__
         return -curand_uniform_double(rand) + 1;
+#else
+        return generate_canonical();
+#endif
     }
 
     __host__ double _double(double min, double max) { return min + (max - min) * _double(); }
 
-    __device__ double _double(double min, double max, curandState *rand) {
+    __host__ __device__ double _double(double min, double max, curandState *rand) {
         return min + (max - min) * _double(rand);
     }
-
 }
 
 #ifdef IS_SFML
