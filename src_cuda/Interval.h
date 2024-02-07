@@ -10,7 +10,7 @@ public:
 
     __host__ __device__ Interval(double _min, double _max) : min_(_min), max_(_max) {}
 
-    __host__ __device__ Interval(const Interval& a, const Interval& b): min_(min(a.min_, b.min_)), max_(max(a.max_, b.max_)){}
+    __host__ __device__ Interval(const Interval& a, const Interval& b): min_(fmin(a.min_, b.min_)), max_(fmax(a.max_, b.max_)){}
 
     [[nodiscard]] __host__ __device__ bool contains(double x) const {
         return min_ <= x && x <= max_;

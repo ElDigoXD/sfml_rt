@@ -22,9 +22,9 @@ public:
     }
 
     __host__ __device__ AABB(const Point3 &a, const Point3 &b) {
-        x = Interval(min(a.x, b.x), max(a.x, b.x));
-        y = Interval(min(a.y, b.y), max(a.y, b.y));
-        z = Interval(min(a.z, b.z), max(a.z, b.z));
+        x = Interval(fmin(a.x, b.x), fmax(a.x, b.x));
+        y = Interval(fmin(a.y, b.y), fmax(a.y, b.y));
+        z = Interval(fmin(a.z, b.z), fmax(a.z, b.z));
     }
 
     __host__ __device__ AABB(const AABB &a, const AABB &b) {
@@ -35,14 +35,14 @@ public:
 
     [[nodiscard]] __host__ __device__ bool hit_0(const Ray &r, Interval ray_t) const {
         for (int i = 0; i < 3; ++i) {
-            auto t0 = min(
+            auto t0 = fmin(
                     (index(i).min_ - r.origin()[i]) / r.direction()[i],
                     (index(i).max_ - r.origin()[i]) / r.direction()[i]);
-            auto t1 = max(
+            auto t1 = fmax(
                     (index(i).min_ - r.origin()[i]) / r.direction()[i],
                     (index(i).max_ - r.origin()[i]) / r.direction()[i]);
-            ray_t.min_ = max(t0, ray_t.min_);
-            ray_t.max_ = min(t1, ray_t.max_);
+            ray_t.min_ = fmax(t0, ray_t.min_);
+            ray_t.max_ = fmin(t1, ray_t.max_);
             if (ray_t.max_ <= ray_t.min_) {
                 return false;
             }

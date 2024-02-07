@@ -7,8 +7,12 @@
 #include <numbers>
 #include <memory>
 #include <iostream>
+#include "cuda.h"
+#include "curand.h"
+#include "curand_globals.h"
+#include "curand_kernel.h"
 
-
+#ifdef __CUDACC__
 #define CU(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 
 void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
@@ -20,7 +24,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
         exit(99);
     }
 }
-
+#endif
 constexpr static const double infinity = std::numeric_limits<double>::infinity();
 
 
@@ -42,12 +46,20 @@ __host__ __device__ double degrees_to_radians(double degrees) {
 namespace Random {
 
     static thread_local unsigned int rng_state = std::rand();
+    static curandGenerator_t l_rand;
+    static bool rand = false;
 
     __host__ static unsigned int rand_pcg() {
         unsigned int state = rng_state;
         rng_state = rng_state * 747796405u + 2891336453u;
         unsigned int word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
         return (word >> 22u) ^ word;
+    }
+
+    __host__ static double rand_cuda() {
+        double tmp;
+        curandGenerateUniformDouble(l_rand, &tmp, 1);
+        return tmp;
     }
 
     __host__ static inline unsigned int XOrShift32() {
@@ -60,6 +72,8 @@ namespace Random {
     }
 
     __host__ double generate_canonical() {
+        if (!rand)
+            return -rand_cuda() + 1;
         return std::rand() / (RAND_MAX + 1.0); // NOLINT(*-msc50-cpp)
         //return rand_pcg() / (std::numeric_limits<uint32_t>::max() + 1.0);
         //return XOrShift32() / (std::numeric_limits<uint32_t>::max() + 1.0);

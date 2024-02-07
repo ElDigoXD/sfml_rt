@@ -47,6 +47,17 @@ private:
 
 
 public:
+    void *operator new(size_t size) {
+        return malloc(size);
+    }
+
+
+    __host__ void *operator new(size_t len, bool gpu) {
+        void *ptr;
+        cudaMallocManaged(&ptr, len);
+        return ptr;
+    }
+
     __host__ __device__ Camera() : Camera(600, 400) {}
 
     __host__ __device__ Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 100) {}
@@ -91,6 +102,7 @@ public:
         auto defocus_radius = focus_dist * tan(degrees_to_radians(defocus_angle / 2));
         defocus_disk_x = u * defocus_radius;
         defocus_disk_y = v * defocus_radius;
+        printf("%f %f %f\n", vfov, viewport_height, viewport_width);
     }
 
     __host__ Ray get_random_ray_at(int i, int j) {
@@ -164,20 +176,16 @@ public:
     }
 
     void render_pixel_line(unsigned char pixels[], const HittableList &world, int line) {
-        int spp_sq = std::floor(std::sqrt(samples_per_pixel));
-        subpixel_delta_x = pixel_delta_x / spp_sq;
-        subpixel_delta_y = pixel_delta_y / spp_sq;
 
         for (int i = 0; i < image_width; ++i) {
             Color pixel_color = Color(0, 0, 0);
 
-            for (int sample_i = 0; sample_i < spp_sq; ++sample_i) {
-                for (int sample_j = 0; sample_j < spp_sq; ++sample_j) {
-                    Ray ray = get_random_ray_at_subpixel(i, line, sample_i, sample_j);
+            for (int sample = 0; sample < samples_per_pixel; ++sample) {
+
+                    Ray ray = get_random_ray_at(i, line);
                     pixel_color += ray_color(ray, max_depth, world);
-                }
             }
-            pixel_color /= std::pow(spp_sq, 2);
+            pixel_color /= samples_per_pixel;
 
             auto rgba_color = to_gamma_color(pixel_color);
             pixels[i * 4 + 0] = static_cast<unsigned char>(rgba_color.r * 255);
@@ -229,22 +237,25 @@ public:
         HitRecord record;
         Color attenuation;
         Color ray_color{1, 1, 1};
+        Ray rec_ray = ray;
+        Ray scattered_ray;
 
         if (depth <= 0)
-            return {0,0,0};
+            return {0, 0, 0};
 
-        while (world.hit(ray, Interval(0.001, infinity), record)) {
+        while (world.hit(rec_ray, Interval(0.001, infinity), record)) {
             if (depth-- <= 0) {
                 return {0, 0, 0};
             }
-            if (record.material->scatter(ray, record, attenuation, ray)) {
+            if (record.material->scatter(rec_ray, record, attenuation, scattered_ray)) {
                 ray_color = ray_color * attenuation;
+                rec_ray = scattered_ray;
             } else {
-                return {0,0,0};
+                return {0, 0, 0};
             }
         }
 
-        Vec3 unit_direction = ray.direction().normalize();
+        Vec3 unit_direction = rec_ray.direction().normalize();
         auto a = 0.5 * (unit_direction.y + 1.0);
         return ray_color * lerp({1, 1, 1}, {0.5, 0.7, 1}, a);
     }
@@ -258,13 +269,13 @@ public:
 
         while ((*world)->hit(rec_ray, Interval(0.001, infinity), record)) {
             if (depth-- <= 0) {
-                return {0,0,0};
+                return {0, 0, 0};
             }
             if (record.material->scatter(rec_ray, record, attenuation, scattered_ray, rand)) {
                 ray_color = ray_color * attenuation;
                 rec_ray = scattered_ray;
             } else {
-                return {0,0,0};
+                return {0, 0, 0};
             }
         }
 

@@ -94,7 +94,7 @@ public:
         double refraction_ratio = record.front_face ? (1.0 / refraction_index) : refraction_index;
 
         Vec3 unit_direction = ray_in.direction().normalize();
-        double cos_theta = min(dot(-unit_direction, record.normal), 1.0);
+        double cos_theta = fmin(dot(-unit_direction, record.normal), 1.0);
         double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
 
         Vec3 direction;
@@ -116,7 +116,7 @@ public:
         double refraction_ratio = record.front_face ? (1.0 / refraction_index) : refraction_index;
 
         Vec3 unit_direction = ray_in.direction().normalize();
-        double cos_theta = min(dot(-unit_direction, record.normal), 1.0);
+        double cos_theta = fmin(dot(-unit_direction, record.normal), 1.0);
         double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
 
         Vec3 direction;

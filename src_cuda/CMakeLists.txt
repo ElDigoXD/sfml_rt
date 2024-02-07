@@ -16,8 +16,32 @@ add_executable(p_exe
 
 set_target_properties(p_exe PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
+target_link_libraries(p_exe -lcurand)
 
 target_compile_definitions(p_exe PRIVATE PROFILE)
+
+add_executable(c_exe
+        AABB.h
+        Camera.h
+        Hittable.h
+        HittableList.h
+        Interval.h
+        Material.h
+        Ray.h
+        Sphere.h
+        Vec3.h
+        utils.h
+        third-party/BS_thread_pool.h
+        third-party/stb_image_write.h
+        main_profiler_cpu.cpp
+)
+
+set_target_properties(c_exe PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
+
+target_link_libraries(c_exe -lcurand)
+target_compile_definitions(c_exe PRIVATE PROFILE)
+
 
 add_subdirectory(third-party)
 

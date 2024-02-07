@@ -153,7 +153,7 @@ __host__ __device__ Vec3 reflect(const Vec3 &v, const Vec3 &n) {
 // R′⊥=(η/η′)(R+(−R⋅n)n)
 // R′∥=−√(1−|R′⊥|^(2))n
 __host__ __device__ Vec3 refract(const Vec3 &unit_v, const Vec3 &n, double refraction_ratio) {
-    auto cos_theta = min(dot(-unit_v, n), 1.0);
+    auto cos_theta = fmin(dot(-unit_v, n), 1.0);
     auto ray_out_perp = refraction_ratio * (unit_v + cos_theta * n);
     auto ray_out_par = -std::sqrt(std::abs(1 - ray_out_perp.length_squared())) * n;
     return ray_out_perp + ray_out_par;

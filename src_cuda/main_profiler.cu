@@ -17,18 +17,18 @@ static const int image_height = 1080;
 static unsigned char pixels[image_width * image_height * 3];
 
 __global__ void
-render(Vec3 *fb, int max_x, int max_y, Camera **d_camera, HittableList **world, curandState *global_state) {
+render(Vec3 *fb, int max_x, int max_y, Camera *d_camera, HittableList **world, curandState *global_state) {
     uint i = threadIdx.x + blockIdx.x * blockDim.x;
     uint j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
     uint pixel_index = j * max_x + i;
     curandState local_state = global_state[pixel_index];
     Vec3 col(0, 0, 0);
-    for (int s = 0; s < (*d_camera)->samples_per_pixel; s++) {
-        Ray r = (*d_camera)->get_random_ray_at(i, j, &local_state);
-        col += Camera::ray_color(r, (*d_camera)->max_depth, world, &local_state);
+    for (int s = 0; s < (d_camera)->samples_per_pixel; s++) {
+        Ray r = (d_camera)->get_random_ray_at(i, j, &local_state);
+        col += Camera::ray_color(r, (d_camera)->max_depth, world, &local_state);
     }
-    fb[pixel_index] = col / (*d_camera)->samples_per_pixel;
+    fb[pixel_index] = col / (d_camera)->samples_per_pixel;
 }
 
 __global__ void render_init(int max_x, int max_y, curandState *global_state) {
@@ -67,14 +67,14 @@ int main() {
 
     Hittable **d_list;
     HittableList **d_world;
-    Camera **d_camera;
+    Camera *d_camera;
 
+    d_camera = new(true) Camera(1920, 1080, 1, 10);
 
     load_scene(Scene::ch14_what_next);
 
-    std::cerr << "Rendering a " << image_width << "x" << image_height << " image with " << "tbd"
-              << " samples per pixel ";
-    std::cerr << "in " << tx << "x" << ty << " blocks.\n";
+    std::cerr << "Rendering a " << image_width << "x" << image_height << " image with " << d_camera->samples_per_pixel
+              << " samples per pixel " << "in " << tx << "x" << ty << " blocks.\n";
 
     CU(cudaMallocManaged((void **) &fb, frame_buffer_size));
     CU(cudaMalloc((void **) &d_global_state, num_pixels * sizeof(curandState)));
@@ -91,8 +91,8 @@ int main() {
     CU(cudaDeviceSynchronize());
 
 
-    for (int j = image_height - 1; j >= 0; --j) {
-        for (int i = 0; i <= image_width; ++i) {
+    for (int j = 0; j < image_height; ++j) {
+        for (int i = 0; i < image_width; ++i) {
             //auto rgba_color = to_gamma_color(fb[i + (image_height - j) * image_width]);
             auto rgba_color = to_gamma_color(fb[i + j * image_width]);
             int pixel_index = j * image_width * 3 + i * 3;
@@ -106,8 +106,8 @@ int main() {
     auto duration = end - start;
 
 
-    stbi_write_png(string_format("gpu_%dx%d_%d_%d_%.0ld.png", image_height, image_width, -1,
-                                 -1, duration).c_str(),
+    stbi_write_png(string_format("%dx%d_%d_%d_gpu_%.0ld.png", image_height, image_width,
+                                 d_camera->samples_per_pixel, d_camera->max_depth, duration).c_str(),
                    image_width, image_height, 3, pixels, 0);
 
     std::cerr << "Rendered in " << duration << "s" << std::endl;
