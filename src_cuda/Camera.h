@@ -102,10 +102,9 @@ public:
         auto defocus_radius = focus_dist * tan(degrees_to_radians(defocus_angle / 2));
         defocus_disk_x = u * defocus_radius;
         defocus_disk_y = v * defocus_radius;
-        printf("%f %f %f\n", vfov, viewport_height, viewport_width);
     }
 
-    __host__ Ray get_random_ray_at(int i, int j) {
+    __host__ Ray get_random_ray_at(int i, int j) const {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto pixel_sample = pixel_center + pixel_sample_square();
 
@@ -114,7 +113,7 @@ public:
         return Ray(ray_origin, pixel_sample - ray_origin);
     }
 
-    __device__ Ray get_random_ray_at(int i, int j, curandState *rand) {
+    __device__ Ray get_random_ray_at(int i, int j, curandState *rand) const {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto pixel_sample = pixel_center + pixel_sample_square(rand);
 
@@ -175,7 +174,7 @@ public:
         }
     }
 
-    void render_pixel_line(unsigned char pixels[], const HittableList &world, int line) {
+    void render_pixel_line(unsigned char pixels[], const HittableList &world, int line) const {
 
         for (int i = 0; i < image_width; ++i) {
             Color pixel_color = Color(0, 0, 0);

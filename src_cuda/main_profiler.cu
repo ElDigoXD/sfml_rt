@@ -12,9 +12,6 @@
 #include "Sphere.h"
 #include "Scene.h"
 
-static const int image_width = 1920;
-static const int image_height = 1080;
-static unsigned char pixels[image_width * image_height * 3];
 
 __global__ void
 render(Vec3 *fb, int max_x, int max_y, Camera *d_camera, HittableList **world, curandState *global_state) {
@@ -46,13 +43,32 @@ __global__ void rand_init(curandState *rand_state) {
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    int image_width = 1920;
+    int image_height = 1080;
+    int samples_per_pixel = 1;
+    int tx = 8, ty = 8;
+    if (argc != 1) {
+        if (argc > 1) {
+            samples_per_pixel = std::atoi(argv[1]);
+        }
+        if (argc > 2) {
+            tx = std::atoi(argv[2]);
+            ty = std::atoi(argv[2]);
+        }
+        if (argc > 3) {
+            image_width = std::atoi(argv[3]) * 16 / 9;
+            image_height = std::atoi(argv[3]);
+        }
+    }
+
+    unsigned char pixels[image_width * image_height * 3];
+
     auto start = time(nullptr);
 
     auto num_pixels = image_width * image_height;
     auto frame_buffer_size = num_pixels * sizeof(Vec3);
 
-    int tx = 8, ty = 8;
     dim3 blocks(image_width / tx + 1, image_height / ty + 1);
     dim3 threads(tx, ty);
 
@@ -69,7 +85,7 @@ int main() {
     HittableList **d_world;
     Camera *d_camera;
 
-    d_camera = new(true) Camera(1920, 1080, 1, 10);
+    d_camera = new(true) Camera(image_width, image_height, samples_per_pixel, 10);
 
     load_scene(Scene::ch14_what_next);
 

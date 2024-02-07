@@ -141,7 +141,7 @@ namespace Scene {
         auto material3 = new Metal(Color(0.7, 0.6, 0.5), 0.0);
         d_list[idx++] = new Sphere(Point3(4, 1, 0), 1.0, material3);
 
-        std::printf("%d %d", 485, idx);
+        assert(485 == idx);
         d_camera.vfov = 20;
         d_camera.look_from = {13, 2, 3};
         d_camera.look_at = d_camera.look_from - unit_vector(d_camera.look_from) * 10;
@@ -194,7 +194,7 @@ namespace CPUScene {
         auto material3 = new Metal(Color(0.7, 0.6, 0.5), 0.0);
         d_list[idx++] = new Sphere(Point3(4, 1, 0), 1.0, material3);
 
-        std::printf("%d %d", 485, idx);
+        assert(485 == idx);
         d_camera.vfov = 20;
         d_camera.look_from = {13, 2, 3};
         d_camera.look_at = d_camera.look_from - unit_vector(d_camera.look_from) * 10;
