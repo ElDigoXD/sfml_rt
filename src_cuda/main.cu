@@ -27,8 +27,8 @@ public:
     sf::RenderWindow window = sf::RenderWindow{{current_width, current_height}, "CMake SFML Project"};
     sf::Sprite sprite;
 
-    Camera camera = Camera();
-    HittableList world;
+    Camera camera;
+    HittableList *world;
     sf::Texture texture;
     unsigned char *pixels = new unsigned char[max_window_width * max_window_height * 4];
 
@@ -50,9 +50,9 @@ public:
     sf::Clock delta_clock;
     sf::Clock render_clock;
 
-    Sphere look_at;
+    Sphere *look_at;
 
-    Sphere selected_hittable = nullptr;
+    Sphere *selected_hittable = nullptr;
 
     Color *colors_agg = new Color[max_window_width * max_window_height];
     Color *colors = new Color[max_window_width * max_window_height];
@@ -71,6 +71,8 @@ public:
 
     GUI() {
         // Imgui variables
+        camera = Camera(image_width, image_height);
+
         render_update_ms = 1;
         t_n = 4;
         pool.reset(t_n);
@@ -81,8 +83,7 @@ public:
         target_samples = 2;
 
         // world.add(look_at);
-        world = Scene::book_1_end(camera);
-        look_at = std::make_shared<Sphere>(camera.look_at, 0.2, std::make_shared<Normals>());
+        world = CPUScene::book_1_end(camera);
     }
 
     void run() {
@@ -123,6 +124,7 @@ public:
                         && sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
                         && sf::Mouse::getPosition(window).x < image_width) {
                         if (is_materials_tab_open) {
+                            /*
                             auto ray = camera.get_ray_at(sf::Mouse::getPosition(window).x,
                                                          sf::Mouse::getPosition(window).y);
                             HitRecord record;
@@ -131,7 +133,7 @@ public:
                                     selected_hittable = std::dynamic_pointer_cast<Sphere>(hittable);
                                 }
                             }
-
+                            */
 
                         } else {
                             mouse_pressed = true;
@@ -174,7 +176,7 @@ public:
                         camera.samples_per_pixel = next_samples_per_pixel;
                         if (total_samples <= target_samples) {
                             pool.detach_loop(0U, image_height, [this](int j) {
-                                camera.render_color_line(&colors[j * camera.image_width], world, (int) j);
+                                camera.render_color_line(&colors[j * camera.image_width], &world, (int) j);
                             }, 50);
                         } else {
                             t_state = IDLE;
@@ -218,11 +220,11 @@ public:
         if (continuous_render) {
             camera.samples_per_pixel = 1;
             pool.detach_loop(0U, image_height, [this](int j) {
-                camera.render_color_line(&colors[j * camera.image_width], world, (int) j);
+                camera.render_color_line(&colors[j * camera.image_width], &world, (int) j);
             }, 50);
         } else {
             pool.detach_loop(0U, image_height, [this](int j) {
-                camera.render_pixel_line(&pixels[j * camera.image_width * 4], world, (int) j);
+                camera.render_pixel_line(&pixels[j * camera.image_width * 4], &world, (int) j);
             }, 50);
         }
         t_state = RENDERING;
@@ -456,7 +458,7 @@ public:
                 start_render();
             };
 
-
+            /*
             if (ImGui::Checkbox("Draw look at", &enable_look_at)) {
                 if (enable_look_at)
                     world.objects.push_back(look_at);
@@ -464,7 +466,7 @@ public:
                     world.objects.pop_back();
                 start_render();
             }
-
+            */
 
             ImGui::Text("Focus distance:");
             if (ImGui::DragDouble("##focus", &camera.focus_dist, 0.1, 0.1, 100, "%.3f", ImGuiSliderFlags_AlwaysClamp)) {
@@ -478,13 +480,24 @@ public:
 
 
         ImGui::Separator();
+
+        if (ImGui::BeginTabItem("gpu")) {
+            ImGui::PushItemWidth(-1.0f);
+
+
+            ImGui::EndTabItem();
+            ImGui::PopItemWidth();
+        }
+
         is_materials_tab_open = ImGui::BeginTabItem("Materials");
         if (is_materials_tab_open) {
             ImGui::PushItemWidth(-1.0f);
             if (selected_hittable) {
+                /*
                 if (imgui_mat((selected_hittable->material.get()))) {
                     start_render();
                 }
+                 */
             }
 
             ImGui::EndTabItem();
@@ -535,16 +548,20 @@ public:
                 case 0:
                     break;
                 case 1:
-                    selected_hittable->material = std::move(std::make_shared<Lambertian>(Colors::blue));
+                    delete selected_hittable->material;
+                    selected_hittable->material = new Lambertian(Colors::blue());
                     break;
                 case 2:
-                    selected_hittable->material = std::move(std::make_shared<Metal>(Colors::blue, 0));
+                    delete selected_hittable->material;
+                    selected_hittable->material = new Metal(Colors::blue(), 0);
                     break;
                 case 3:
-                    selected_hittable->material = std::move(std::make_shared<Dielectric>(1.5));
+                    delete selected_hittable->material;
+                    selected_hittable->material = new Dielectric(1.5);
                     break;
                 case 4:
-                    selected_hittable->material = std::move(std::make_shared<Normals>());
+                    delete selected_hittable->material;
+                    selected_hittable->material = new Normals();
                     break;
                 default:
                     break;

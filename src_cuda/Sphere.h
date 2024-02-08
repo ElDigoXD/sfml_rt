@@ -13,6 +13,8 @@ public:
     Material *material;
     Point3 center;
 
+    __host__ __device__ Sphere() {};
+
     __host__ __device__ Sphere(Point3 _center, double _radius, Material *_material) : center(_center), radius(_radius),
                                                                   material(_material) {
         auto radius_vec = Vec3(radius, radius, radius);

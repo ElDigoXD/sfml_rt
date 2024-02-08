@@ -24,6 +24,7 @@ public:
     Point3 camera_center;
 
     double defocus_angle = 0;
+    double focus_dist;
 
 private:
 
@@ -40,7 +41,6 @@ private:
     Vec3 viewport_y;
     Vec3 defocus_disk_x;
     Vec3 defocus_disk_y;
-
     Vec3 viewport_upper_left;
 
     Point3 pixel_00_location;
@@ -78,7 +78,7 @@ public:
 
         camera_center = look_from;
 
-        auto focus_dist = (look_from - look_at).length();
+        focus_dist = (look_from - look_at).length();
         auto theta = degrees_to_radians(vfov);
         auto h = tan(theta / 2);
 

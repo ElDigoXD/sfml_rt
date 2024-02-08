@@ -46,7 +46,7 @@ target_compile_definitions(c_exe PRIVATE PROFILE)
 add_subdirectory(third-party)
 
 add_executable(gui_exe
-        main.cpp
+        main.cu
         Vec3.h
         Ray.h
         Camera.h
