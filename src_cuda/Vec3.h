@@ -86,6 +86,10 @@ __host__ __device__ Vec3 operator-(const Vec3 &a, const Vec3 &b) { return {a.x -
 
 __host__ __device__ Vec3 operator*(const Vec3 &a, const Vec3 &b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
 
+__host__ __device__ bool operator==(const Vec3 &a, const Vec3 &b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+
+__host__ __device__ bool operator!=(const Vec3 &a, const Vec3 &b) { return !(a == b); }
+
 __host__ __device__ Vec3 operator*(const Vec3 &a, double t) { return {a.x * t, a.y * t, a.z * t}; }
 
 __host__ __device__ Vec3 operator*(double t, const Vec3 &a) { return a * t; }

@@ -26,6 +26,7 @@ __global__ void ___##name##_kernel(Hittable **d_list, HittableList **d_world, Ca
 
 #define load_scene(scene) scene(&d_list, &d_world, *d_camera, d_global_state2)
 #ifdef __CUDACC__
+
 #include <device_launch_parameters.h>
 
 namespace Scene {
@@ -145,6 +146,20 @@ namespace Scene {
         d_camera.defocus_angle = 0.6;
         d_camera.update();
     end_create_scene
+
+    create_scene(point_light, (4))
+        d_list[0] = new Sphere(Vec3(0, 1, -1), 0.5, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(0, -99.5, -1), 100, new Lambertian(Vec3(0.8, 0.8, 0.0)));
+        d_list[2] = new Sphere(Vec3(1, 1, -1), 0.5, new Dielectric(1.5));
+        d_list[3] = new Sphere(Vec3(-1, 1, -1), 0.5, new Metal(Colors::red(), 0));
+
+        d_camera.vfov = 10;
+        d_camera.look_from = {0, 5, 10};
+        d_camera.look_at = {0, 1, 0};
+        d_camera.update();
+
+    end_create_scene
+
 }
 #endif
 
@@ -196,5 +211,22 @@ namespace CPUScene {
         d_camera.update();
 
         return new HittableList(d_list, 22 * 22 + 1 + 3);
+    }
+
+    HittableList* point_light(Camera &d_camera){
+        auto d_list = new Hittable *[5];
+
+        d_list[0] = new Sphere(Vec3(0, 1, -1), 0.5, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(0, -99.5, -1), 100, new Lambertian(Vec3(0.8, 0.8, 0.0)));
+        d_list[2] = new Sphere(Vec3(1, 1, -1), 0.5, new Dielectric(1.5));
+        d_list[3] = new Sphere(Vec3(1, 1, -3), 0.5, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[4] = new Sphere(Vec3(-1, 1, -1), 0.5, new Metal(Colors::red(), 0));
+
+        d_camera.vfov = 10;
+        d_camera.look_from = {0, 5, 10};
+        d_camera.look_at = {0, 1, 0};
+        d_camera.update();
+
+        return new HittableList(d_list, 5);
     }
 }

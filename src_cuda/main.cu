@@ -83,7 +83,7 @@ public:
         target_samples = 2;
 
         // world.add(look_at);
-        world = CPUScene::book_1_end(camera);
+        world = CPUScene::point_light(camera);
     }
 
     void run() {
@@ -492,6 +492,30 @@ public:
         is_materials_tab_open = ImGui::BeginTabItem("Materials");
         if (is_materials_tab_open) {
             ImGui::PushItemWidth(-1.0f);
+
+            ImGui::Text("Light position:");
+            if (ImGui::DragDouble3("##lp", camera.light.e, 0.1, -100, 100)) {
+                start_render();
+            };
+
+            ImGui::Text("Light color:");
+            float mat[3];
+            to_float_array(camera.light_color, mat);
+            if (ImGui::ColorEdit3("##lc", mat)) {
+                camera.light_color = from_float_array(mat);
+                start_render();
+            };
+
+            ImGui::Text("Intensity (diff, spec, sky):");
+            if (ImGui::DragDouble3("##int", camera.intensity, 0.01, 0, 2)) {
+                start_render();
+            };
+
+            ImGui::Text("Shinyness:");
+            if (ImGui::SliderInt("##shi", &camera.shinyness, 1, 10000, "%d",ImGuiSliderFlags_Logarithmic)) {
+                start_render();
+            };
+
             if (selected_hittable) {
                 /*
                 if (imgui_mat((selected_hittable->material.get()))) {

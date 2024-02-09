@@ -212,46 +212,52 @@ public:
         return lerp(Colors::white(), Colors::blue_sky(), a);
     }
 
-    __host__ __device__ static Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) {
+    Point3 light{0, 3, 0};
+    Color light_color{1, 1, 1};
+    union {
+        struct {
+            double diffuse_intensity;
+            double specular_intensity;
+            double sky_intensity;
+        };
+        double intensity[3]{0.3, 0.3, 0.3};
+    };
+    int shinyness = 1000;
+
+    __host__ __device__ Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) const {
         HitRecord record;
         Color attenuation;
-        Color global_color{1, 1, 1};
-        Color light_color{1, 1, 1};
-        Color total_color{1, 1, 1};
-        Ray rec_ray = ray;
+        Color sky_color = Colors::blue_sky();
+        Color illumination_color{0, 0, 0};
+        Ray cur_ray = ray;
+        int cur_depth = depth;
         Ray scattered_ray;
 
-        while ((*world)->hit(rec_ray, Interval(0.001, infinity), record)) {
+        while ((*world)->hit(cur_ray, Interval(0.001, infinity), record)) {
             // Ray does not escape, so it's represented as black
-            if (depth-- <= 0) {
-                return {0, 0, 0};
+            if (cur_depth-- <= 0) return {0, 0, 0};
+
+            auto light_ray = Ray(record.p, light - record.p);
+
+            if (!record.material->scatter(cur_ray, record, attenuation, scattered_ray, rand)) return {0, 0, 0};
+            sky_color = sky_color * attenuation;
+
+
+            if (!(*world)->hit2(light_ray) && attenuation != Color{1, 1, 1} /* Not dielectric */) {
+                if (dot(scattered_ray.direction(), record.normal) <= 0) break;
+
+                auto diffuse = attenuation * light_color * dot(light_ray.direction().normalize(), record.normal);
+
+                auto h = ((camera_center - record.p).normalize() + (light - record.p).normalize()).normalize();
+                auto specular = light_color * pow(dot(h, record.normal), shinyness / 4);
+
+                illumination_color += (diffuse * diffuse_intensity + specular * specular_intensity);
+
             }
-
-            HitRecord none;
-
-            // Ray scatters from the surface (not always in metal) and gets local light recursively.
-            if (record.material->scatter(rec_ray, record, attenuation, scattered_ray, rand)) {
-                auto light = Point3(4, 3, 0);
-                auto light_ray = Ray(record.p, light - record.p);
-                // Light ray doesn't hit an object, so gets brighter.
-                if ((*world)->hit2(light_ray)) {
-                    light_color = {0, 0, 0};
-                } else {
-                    light_color = light_color * attenuation * Color{1, 1, 1} * dot(light_ray.direction().normalize(), record.normal);
-
-                };
-                global_color = global_color * attenuation;
-                total_color = total_color * (global_color*0.5 + light_color*0.5);
-                rec_ray = scattered_ray;
-            } else {
-                return {0, 0, 0};
-            }
+            cur_ray = scattered_ray;
         }
 
-        // Ray escapes and global illumination applies
-        Vec3 unit_direction = rec_ray.direction().normalize();
-        auto a = 0.5 * (unit_direction.y + 1.0);
-        return (total_color * lerp(Colors::white(), Colors::blue_sky(), a)).clamp(0, 1);
+        return (sky_color * sky_intensity + illumination_color).clamp(0, 1);
     }
 
     void set_focus_dist(double dist) {

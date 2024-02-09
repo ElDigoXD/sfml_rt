@@ -23,7 +23,7 @@ render(Vec3 *fb, int max_x, int max_y, Camera *d_camera, HittableList **world, c
     Vec3 col(0, 0, 0);
     for (int s = 0; s < (d_camera)->samples_per_pixel; s++) {
         Ray r = (d_camera)->get_random_ray_at(i, j, &local_state);
-        col += Camera::ray_color(r, (d_camera)->max_depth, world, &local_state);
+        col += (d_camera)->ray_color(r, (d_camera)->max_depth, world, &local_state);
     }
     fb[pixel_index] = col / (d_camera)->samples_per_pixel;
 }
@@ -46,7 +46,7 @@ __global__ void rand_init(curandState *rand_state) {
 int main(int argc, char *argv[]) {
     int image_width = 1920;
     int image_height = 1080;
-    int samples_per_pixel = 1;
+    int samples_per_pixel = 100;
     int tx = 8, ty = 8;
     if (argc != 1) {
         if (argc > 1) {
@@ -85,9 +85,9 @@ int main(int argc, char *argv[]) {
     HittableList **d_world;
     Camera *d_camera;
 
-    d_camera = new(true) Camera(image_width, image_height, samples_per_pixel, 10);
+    d_camera = new(true) Camera(image_width, image_height, samples_per_pixel, 100);
 
-    load_scene(Scene::ch14_what_next);
+    load_scene(Scene::point_light);
 
     std::cerr << "Rendering a " << image_width << "x" << image_height << " image with " << d_camera->samples_per_pixel
               << " samples per pixel " << "in " << tx << "x" << ty << " blocks.\n";
