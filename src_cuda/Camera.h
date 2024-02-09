@@ -235,7 +235,7 @@ public:
 
         while ((*world)->hit(cur_ray, Interval(0.001, infinity), record)) {
             // Ray does not escape, so it's represented as black
-            if (cur_depth-- <= 0) return {0, 0, 0};
+            if (cur_depth-- <= 0) break;
 
             auto light_ray = Ray(record.p, light - record.p);
 
