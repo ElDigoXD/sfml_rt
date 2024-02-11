@@ -12,6 +12,9 @@ add_executable(p_exe
         utils.h
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
+        Triangle.h
+        third-party/tiny_obj_loader.h
+        obj.h
 )
 
 set_target_properties(p_exe PROPERTIES
@@ -34,6 +37,9 @@ add_executable(c_exe
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
         main_profiler_cpu.cpp
+        Triangle.h
+        third-party/tiny_obj_loader.h
+        obj.h
 )
 
 set_target_properties(c_exe PROPERTIES
@@ -60,6 +66,9 @@ add_executable(gui_exe
         AABB.h
         Scene.h
         HittableList.h
+        Triangle.h
+        third-party/tiny_obj_loader.h
+        obj.h
 )
 
 target_compile_definitions(gui_exe PRIVATE IS_SFML)

@@ -60,7 +60,7 @@ public:
 
     __host__ __device__ Camera() : Camera(600, 400) {}
 
-    __host__ __device__ Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 100) {}
+    __host__ __device__ Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 10) {}
 
     __host__ __device__ Camera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
             : image_width(_image_width),
@@ -212,8 +212,8 @@ public:
         return lerp(Colors::white(), Colors::blue_sky(), a);
     }
 
-    Point3 light{0, 3, 0};
-    Color light_color{1, 1, 1};
+    Point3 light{0, 0, 0};
+    Color light_color{0, 0, 0};
     union {
         struct {
             double diffuse_intensity;
@@ -232,6 +232,7 @@ public:
         Ray cur_ray = ray;
         int cur_depth = depth;
         Ray scattered_ray;
+        bool has_point_light = light != Color{0, 0, 0};
 
         while ((*world)->hit(cur_ray, Interval(0.001, infinity), record)) {
             // Ray does not escape, so it's represented as black
@@ -243,7 +244,7 @@ public:
             sky_color = sky_color * attenuation;
 
 
-            if (!(*world)->hit2(light_ray) && attenuation != Color{1, 1, 1} /* Not dielectric */) {
+            if (has_point_light && !(*world)->hit2(light_ray) && attenuation != Color{1, 1, 1} /* Not dielectric */) {
                 if (dot(scattered_ray.direction(), record.normal) <= 0) break;
 
                 auto diffuse = attenuation * light_color * dot(light_ray.direction().normalize(), record.normal);

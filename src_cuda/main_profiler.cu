@@ -1,6 +1,11 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "third-party/stb_image_write.h"
+
+#define TINYOBJLOADER_IMPLEMENTATION
+
+#include "third-party/tiny_obj_loader.h"
+
 #include "third-party/BS_thread_pool.h"
 #include "cuda.h"
 #include <chrono>
@@ -46,7 +51,7 @@ __global__ void rand_init(curandState *rand_state) {
 int main(int argc, char *argv[]) {
     int image_width = 1920;
     int image_height = 1080;
-    int samples_per_pixel = 100;
+    int samples_per_pixel = 10;
     int tx = 8, ty = 8;
     if (argc != 1) {
         if (argc > 1) {
@@ -87,7 +92,7 @@ int main(int argc, char *argv[]) {
 
     d_camera = new(true) Camera(image_width, image_height, samples_per_pixel, 100);
 
-    load_scene(Scene::point_light);
+    load_scene(ObjScene::shuttle);
 
     std::cerr << "Rendering a " << image_width << "x" << image_height << " image with " << d_camera->samples_per_pixel
               << " samples per pixel " << "in " << tx << "x" << ty << " blocks.\n";

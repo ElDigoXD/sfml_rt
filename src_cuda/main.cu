@@ -4,6 +4,9 @@
 #define BS_THREAD_POOL_ENABLE_PAUSE
 
 #include "third-party/BS_thread_pool.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+
+#include "third-party/tiny_obj_loader.h"
 #include <SFML/Graphics.hpp>
 #include <thread>
 #include <type_traits>
@@ -13,6 +16,8 @@
 #include "Camera.h"
 #include "Material.h"
 #include "Scene.h"
+#include "Triangle.h"
+#include "obj.h"
 
 
 class GUI {
@@ -67,7 +72,7 @@ public:
     sf::Vector2i before_click_mouse_position;
     sf::Vector2i before_move_mouse_position;
     bool mouse_pressed = false;
-    sf::Time dt;
+    std::vector<Hittable *> *triangles = new std::vector<Hittable *>;
 
     GUI() {
         // Imgui variables
@@ -82,8 +87,17 @@ public:
         enable_camera_movement = true;
         target_samples = 2;
 
-        // world.add(look_at);
-        world = CPUScene::point_light(camera);
+        //world = CPUScene::point_light(camera);
+
+        //triangles = Obj::get_triangles();
+//
+        //world = new HittableList(&triangles->at(0), triangles->size());
+        //camera.look_from = {-6.31, 4.55, 3.32};
+        //camera.look_at = {-1.5, -1.1, -0.8};
+        //camera.light = {0, 10, 10};
+        //camera.light_color = {1, 1, 1};
+
+        world = CPUScene::shuttle(camera);
     }
 
     void run() {
@@ -95,7 +109,7 @@ public:
         sprite.setTexture(texture, true);
 
         start_render();
-
+        sf::Time dt;
         while (window.isOpen()) {
             dt = delta_clock.restart();
             auto event = sf::Event{};
@@ -121,7 +135,8 @@ public:
                     if ((event.mouseButton.button == sf::Mouse::Left
                          || event.mouseButton.button == sf::Mouse::Right)
                         && enable_camera_movement
-                        && sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
+                        && sprite.getGlobalBounds().contains((float) event.mouseButton.x,
+                                                             (float) event.mouseButton.y)
                         && sf::Mouse::getPosition(window).x < image_width) {
                         if (is_materials_tab_open) {
                             /*
@@ -154,7 +169,8 @@ public:
                            && window.hasFocus()
                            && enable_camera_movement
                            &&
-                           sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
+                           sprite.getGlobalBounds().contains((float) event.mouseButton.x,
+                                                             (float) event.mouseButton.y)
                            && sf::Mouse::getPosition(window).x < image_width) {
                     camera.vfov -= event.mouseWheel.delta;
 
@@ -164,7 +180,7 @@ public:
 
             handle_mouse();
 
-            handle_keyboard();
+            handle_keyboard(dt);
 
 
             if (t_state != IDLE) {
@@ -196,7 +212,7 @@ public:
             }
 
             // Imgui
-            imgui();
+            imgui(dt);
 
             window.clear();
             window.draw(sprite);
@@ -263,7 +279,7 @@ public:
         }
     }
 
-    void handle_keyboard() {
+    void handle_keyboard(sf::Time dt) {
         auto speed = 0.003 * dt.asMilliseconds();
         if (!window.hasFocus() || !enable_camera_movement) return;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
@@ -322,7 +338,7 @@ public:
     bool enable_look_at = false;
     bool is_materials_tab_open;
 
-    void imgui() {
+    void imgui(sf::Time dt) {
         ImGui::SFML::Update(window, dt);
         ImGuiWindowFlags window_flags = 0;
         window_flags |= ImGuiWindowFlags_NoMove;
@@ -469,7 +485,8 @@ public:
             */
 
             ImGui::Text("Focus distance:");
-            if (ImGui::DragDouble("##focus", &camera.focus_dist, 0.1, 0.1, 100, "%.3f", ImGuiSliderFlags_AlwaysClamp)) {
+            if (ImGui::DragDouble("##focus", &camera.focus_dist, 0.1, 0.1, 100, "%.3f",
+                                  ImGuiSliderFlags_AlwaysClamp)) {
                 camera.set_focus_dist(camera.focus_dist);
                 update_camera_and_start_render();
             };
@@ -512,7 +529,7 @@ public:
             };
 
             ImGui::Text("Shinyness:");
-            if (ImGui::SliderInt("##shi", &camera.shinyness, 1, 10000, "%d",ImGuiSliderFlags_Logarithmic)) {
+            if (ImGui::SliderInt("##shi", &camera.shinyness, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic)) {
                 start_render();
             };
 

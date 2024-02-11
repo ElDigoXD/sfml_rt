@@ -3,6 +3,8 @@
 #include <cuda.h>
 #include "Sphere.h"
 #include "utils.h"
+#include "Triangle.h"
+#include "obj.h"
 
 #define create_scene(name, length)                                                                                                                               \
                                                                                                                                                                  \
@@ -159,7 +161,49 @@ namespace Scene {
         d_camera.update();
 
     end_create_scene
+}
 
+namespace ObjScene {
+    __global__ void
+    ___shuttle_kernel(Hittable **d_list, HittableList **d_world, Camera &d_camera, const Vec3 *vertices,
+                      curandState *d_global_state, int d_list_length);
+
+    __host__ void shuttle(Hittable ***d_list, HittableList ***d_world, Camera &d_camera, curandState *d_global_state) {
+        Vec3 *out_vertices;
+        auto len = Obj::get_vertices(&out_vertices, true);
+
+        CU(cudaMalloc(&*d_list, sizeof(Hittable *) * len));
+        CU(cudaMalloc(&*d_world, sizeof(HittableList *)));
+        CU(cudaDeviceSynchronize());
+
+        ___shuttle_kernel<<<1, 1>>>(*d_list, *d_world, d_camera, out_vertices, d_global_state, len);
+        CU(cudaGetLastError());
+        CU(cudaDeviceSynchronize());
+    }
+
+    __global__ void
+    ___shuttle_kernel(Hittable **d_list, HittableList **d_world, Camera &d_camera, const Vec3 *vertices,
+                      curandState *d_global_state, int d_list_length) {
+        if (threadIdx.x != 0 || blockIdx.x != 0) return;
+        auto l_rand = d_global_state;
+
+        auto *mat = new Lambertian({0.2, 0.5, 0.8});
+        for (int i = 0; i < d_list_length / 3; i++) {
+            d_list[i] = new Triangle(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2], mat);
+        }
+
+        d_camera.vfov = 2;
+        d_camera.look_from = {-6.31, 4.55, 3.32};
+        d_camera.look_at = {-1.5, -1.1, -0.8};
+        d_camera.look_at = {0,0,0};
+        d_camera.light = {0, 10, 10};
+        d_camera.light_color = {1, 1, 1};
+        d_camera.diffuse_intensity = 1;
+        d_camera.sky_intensity = 0;
+        d_camera.update();
+
+        *d_world = new HittableList(d_list, d_list_length / 3);
+    }
 }
 #endif
 
@@ -213,7 +257,7 @@ namespace CPUScene {
         return new HittableList(d_list, 22 * 22 + 1 + 3);
     }
 
-    HittableList* point_light(Camera &d_camera){
+    HittableList *point_light(Camera &d_camera) {
         auto d_list = new Hittable *[5];
 
         d_list[0] = new Sphere(Vec3(0, 1, -1), 0.5, new Lambertian(Vec3(0.7, 0.3, 0.3)));
@@ -227,6 +271,53 @@ namespace CPUScene {
         d_camera.look_at = {0, 1, 0};
         d_camera.update();
 
+        d_camera.light = {0, 3, 0};
+        d_camera.light_color = {1, 1, 1};
+
         return new HittableList(d_list, 5);
+    }
+
+    HittableList *triangle(Camera &d_camera) {
+        auto d_list = new Hittable *[6];
+
+
+        d_list[0] = new Triangle({-1, 0, -1}, {1, 0, -1}, {0, 1, 0}, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Triangle({1, 0, -1}, {1, 0, 1}, {0, 1, 0}, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[2] = new Triangle({1, 0, 1}, {-1, 0, 1}, {0, 1, 0}, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[3] = new Triangle({-1, 0, 1}, {-1, 0, -1}, {0, 1, 0}, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[4] = new Triangle({-1, 0, -1}, {1, 0, 1}, {1, 0, -1}, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[5] = new Triangle({1, 0, 1}, {-1, 0, -1}, {-1, 0, 1}, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+
+        d_camera.vfov = 90;
+        d_camera.look_from = {1.130, 3, 1.5};
+        d_camera.look_at = {0, 0, 0};
+        d_camera.update();
+
+        d_camera.light = {0, 3, 3};
+        d_camera.light_color = {1, 1, 1};
+
+        return new HittableList(d_list, 6);
+    }
+
+    HittableList *shuttle(Camera &d_camera) {
+        Vec3 *vertices;
+        auto d_list_length = Obj::get_vertices(&vertices, false);
+        auto d_list = new Hittable *[d_list_length];
+
+        auto *mat = new Lambertian({0.2, 0.5, 0.8});
+        for (int i = 0; i < d_list_length / 3; i++) {
+            d_list[i] = new Triangle(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2], mat);
+        }
+
+        d_camera.look_from = {-6.31, 4.55, 3.32};
+        d_camera.look_at = {0, 0, 0};
+        d_camera.look_at = {-1.5, -1.1, -0.8};
+        //d_camera.light = {0, 10, 10};
+        //d_camera.light_color = {1, 1, 1};
+        //d_camera.diffuse_intensity = 1;
+        //d_camera.sky_intensity = 0;
+        d_camera.update();
+
+        return new HittableList(d_list, d_list_length / 3);
     }
 }
