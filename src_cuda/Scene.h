@@ -274,6 +274,9 @@ namespace CPUScene {
         d_camera.light = {0, 3, 0};
         d_camera.light_color = {1, 1, 1};
 
+        d_camera.diffuse_intensity = 1;
+        d_camera.sky_intensity = 0;
+
         return new HittableList(d_list, 5);
     }
 
@@ -310,13 +313,14 @@ namespace CPUScene {
         }
 
         d_camera.look_from = {-6.31, 4.55, 3.32};
-        d_camera.look_at = {0, 0, 0};
         d_camera.look_at = {-1.5, -1.1, -0.8};
-        //d_camera.light = {0, 10, 10};
-        //d_camera.light_color = {1, 1, 1};
-        //d_camera.diffuse_intensity = 1;
-        //d_camera.sky_intensity = 0;
+        d_camera.light = {0, 10, 10};
+        d_camera.light_color = {1, 1, 1};
+        d_camera.diffuse_intensity = 1;
+        d_camera.sky_intensity = 0;
         d_camera.update();
+
+
 
         return new HittableList(d_list, d_list_length / 3);
     }

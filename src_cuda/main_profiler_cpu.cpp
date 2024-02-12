@@ -6,6 +6,12 @@
 
 #include "third-party/stb_image_write.h"
 #include "third-party/BS_thread_pool.h"
+
+#include "third-party/BS_thread_pool.h"
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "third-party/tiny_obj_loader.h"
+
 #include "Scene.h"
 
 #include "curand.h"
@@ -34,7 +40,7 @@ int main(int argc, char *argv[]) {
     curandCreateGeneratorHost(&Random::l_rand, curandRngType::CURAND_RNG_PSEUDO_DEFAULT);
 
     HittableList *world;
-    world = CPUScene::book_1_end(camera);
+    world = CPUScene::shuttle(camera);
 
 
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};

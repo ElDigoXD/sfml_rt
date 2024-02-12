@@ -220,7 +220,7 @@ public:
             double specular_intensity;
             double sky_intensity;
         };
-        double intensity[3]{0.3, 0.3, 0.3};
+        double intensity[3]{0, 0.3, 1};
     };
     int shinyness = 1000;
 

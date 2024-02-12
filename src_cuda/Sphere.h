@@ -53,7 +53,7 @@ public:
         return true;
     }
 
-    // [[nodiscard]]__host__ __device__ AABB bounding_box() const override {
-    //     return bbox;
-    // }
+    [[nodiscard] ]__host__ __device__ AABB bounding_box() const override {
+        return bbox;
+    }
 };

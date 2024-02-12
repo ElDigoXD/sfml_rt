@@ -61,4 +61,8 @@ public:
         record.set_face_normal(ray, n.normalize());
         return true;
     }
+
+    [[nodiscard]] __host__ __device__ AABB bounding_box() const override {
+        return AABB();
+    }
 };

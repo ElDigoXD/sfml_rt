@@ -4,6 +4,7 @@
 #define BS_THREAD_POOL_ENABLE_PAUSE
 
 #include "third-party/BS_thread_pool.h"
+
 #define TINYOBJLOADER_IMPLEMENTATION
 
 #include "third-party/tiny_obj_loader.h"

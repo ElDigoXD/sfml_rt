@@ -1,11 +1,11 @@
 #pragma once
-
+#include "utils.h"
 namespace Obj {
 
     int get_vertices(Vec3 **out_vertices, bool cuda) {
         auto vertices = std::vector<Vec3>();
 
-        std::string input_file = "../src_cuda/resources/teapot1.obj";
+        std::string input_file = "../src_cuda/resources/shuttle.obj";
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -39,9 +39,12 @@ namespace Obj {
                 index_offset += fv;
             }
         }
-        if (cuda)
+        if (cuda){
+#ifdef __CUDACC__
+
             CU(cudaMallocManaged(out_vertices, sizeof(Vec3) * vertices.size()));
-        else
+#endif
+        } else
             *out_vertices = new Vec3 [vertices.size()];
 
         std::copy(vertices.begin(), vertices.end(), *out_vertices);

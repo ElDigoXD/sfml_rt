@@ -7,10 +7,15 @@ class HittableList : public Hittable {
 public:
     int list_size{};
     Hittable **list = nullptr;
+    AABB bbox{};
 
     __host__ __device__ HittableList() {};
 
     __host__ __device__ explicit HittableList(Hittable **l, int n) : list(l), list_size(n) {
+        bbox = list[0]->bounding_box();
+        for (int i = 0; i < list_size; i++) {
+            bbox = AABB(bbox, list[i]->bounding_box());
+        }
     }
 
     __host__ __device__ bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
@@ -37,5 +42,9 @@ public:
             }
         }
         return false;
+    }
+
+    [[nodiscard]] __host__ __device__ AABB bounding_box() const override {
+        return bbox;
     }
 };
