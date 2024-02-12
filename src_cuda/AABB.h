@@ -72,4 +72,13 @@ public:
         }
         return true;
     }
+
+    __host__ __device__ AABB pad() {
+        auto delta = 0.0001;
+        Interval new_x = (x.max_ - x.min_ >= delta) ? x : x.expand(delta);
+        Interval new_y = (y.max_ - y.min_ >= delta) ? y : y.expand(delta);
+        Interval new_z = (z.max_ - z.min_ >= delta) ? z : z.expand(delta);
+
+        return {new_x, new_y, new_z};
+    }
 };

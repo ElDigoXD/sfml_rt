@@ -25,6 +25,11 @@ public:
         if (x > max_) return max_;
         return x;
     }
+    __host__ __device__ Interval expand(double delta) const{
+        auto padding = delta/2;
+        return {min_-padding, max_+padding};
+    }
+
 
     static const Interval empty, universe;
 

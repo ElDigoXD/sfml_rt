@@ -19,7 +19,7 @@
 #include "Scene.h"
 #include "Triangle.h"
 #include "obj.h"
-
+#include "BVHNode.h"
 
 class GUI {
 public:

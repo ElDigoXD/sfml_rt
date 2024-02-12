@@ -9,12 +9,17 @@ class Triangle : public Hittable {
 public:
     Material *material;
     const Vec3 v[3];
+    AABB bbox;
 
     __host__ __device__ Triangle(const Vec3 _v[3], Material *_material) :
-            v{_v[0], _v[1], _v[2]}, material(_material) {}
+            v{_v[0], _v[1], _v[2]}, material(_material) {
+        bbox = AABB(AABB(v[0], v[1]), AABB(v[0], v[2]));
+    }
 
     __host__ __device__ Triangle(const Vec3 v0, const Vec3 v1, const Vec3 v2, Material *_material) :
-            v{v0, v1, v2}, material(_material) {}
+            v{v0, v1, v2}, material(_material) {
+
+    }
 
     __host__ __device__ bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
 

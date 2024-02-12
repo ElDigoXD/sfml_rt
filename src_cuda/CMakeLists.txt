@@ -15,6 +15,7 @@ add_executable(p_exe
         Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
+        BVHNode.h
 )
 
 set_target_properties(p_exe PROPERTIES
@@ -40,6 +41,7 @@ add_executable(c_exe
         Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
+        BVHNode.h
 )
 
 set_target_properties(c_exe PROPERTIES
@@ -69,6 +71,7 @@ add_executable(gui_exe
         Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
+        BVHNode.h
 )
 
 target_compile_definitions(gui_exe PRIVATE IS_SFML)
