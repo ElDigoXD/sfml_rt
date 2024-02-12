@@ -36,7 +36,7 @@ add_executable(c_exe
         utils.h
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
-        main_profiler_cpu.cpp
+        main_profiler_cpu.cu
         Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
