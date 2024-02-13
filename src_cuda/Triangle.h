@@ -18,7 +18,7 @@ public:
 
     __host__ __device__ Triangle(const Vec3 v0, const Vec3 v1, const Vec3 v2, Material *_material) :
             v{v0, v1, v2}, material(_material) {
-
+        bbox = AABB(AABB(v[0], v[1]), AABB(v[0], v[2]));
     }
 
     __host__ __device__ bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
@@ -68,6 +68,6 @@ public:
     }
 
     [[nodiscard]] __host__ __device__ AABB bounding_box() const override {
-        return AABB();
+        return bbox;
     }
 };

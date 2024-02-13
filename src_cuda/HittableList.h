@@ -12,6 +12,7 @@ public:
     __host__ __device__ HittableList() {};
 
     __host__ __device__ explicit HittableList(Hittable **l, int n) : list(l), list_size(n) {
+        if (list_size == 0) return;
         bbox = list[0]->bounding_box();
         for (int i = 0; i < list_size; i++) {
             bbox = AABB(bbox, list[i]->bounding_box());
