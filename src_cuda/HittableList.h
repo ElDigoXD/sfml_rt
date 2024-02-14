@@ -5,11 +5,10 @@
 
 class HittableList : public Hittable {
 public:
-    int list_size{};
-    Hittable **list = nullptr;
-    AABB bbox{};
+    int list_size;
+    Hittable **list;
 
-    __host__ __device__ HittableList() {};
+    //__host__ __device__ HittableList() {};
 
     __host__ __device__ explicit HittableList(Hittable **l, int n) : list(l), list_size(n) {
         if (list_size == 0) return;
@@ -43,9 +42,5 @@ public:
             }
         }
         return false;
-    }
-
-    [[nodiscard]] __host__ __device__ AABB bounding_box() const override {
-        return bbox;
     }
 };

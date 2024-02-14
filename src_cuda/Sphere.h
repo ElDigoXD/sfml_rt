@@ -8,7 +8,6 @@
 class Sphere: public Hittable {
 private:
     double radius;
-    AABB bbox;
 public:
     Material *material;
     Point3 center;
@@ -51,9 +50,5 @@ public:
         record.material = material;
 
         return true;
-    }
-
-    [[nodiscard] ]__host__ __device__ AABB bounding_box() const override {
-        return bbox;
     }
 };

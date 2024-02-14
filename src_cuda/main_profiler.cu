@@ -23,6 +23,7 @@ render(Vec3 *fb, int max_x, int max_y, Camera *d_camera, HittableList **world, c
     uint i = threadIdx.x + blockIdx.x * blockDim.x;
     uint j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
+
     uint pixel_index = j * max_x + i;
     curandState local_state = global_state[pixel_index];
     Vec3 col(0, 0, 0);

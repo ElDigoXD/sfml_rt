@@ -9,7 +9,6 @@ class Triangle : public Hittable {
 public:
     Material *material;
     const Vec3 v[3];
-    AABB bbox;
 
     __host__ __device__ Triangle(const Vec3 _v[3], Material *_material) :
             v{_v[0], _v[1], _v[2]}, material(_material) {
@@ -65,9 +64,5 @@ public:
         record.material = material;
         record.set_face_normal(ray, n.normalize());
         return true;
-    }
-
-    [[nodiscard]] __host__ __device__ AABB bounding_box() const override {
-        return bbox;
     }
 };

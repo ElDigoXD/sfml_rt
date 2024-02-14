@@ -9,13 +9,12 @@ class BVHNode : public Hittable {
 public:
     Hittable *left;
     Hittable *right;
-    AABB bbox;
 
-    __host__ BVHNode(Hittable **list, int list_size, curandState *rand) :
-            BVHNode(thrust::host_vector<Hittable *>(list, list + list_size), 0,
+    __host__ __device__ BVHNode(Hittable **list, int list_size, curandState *rand) :
+            BVHNode(list, 0,
                     list_size, rand) {}
 
-    __host__ BVHNode(const thrust::host_vector<Hittable *> &list, int start, int end, curandState *rand) {
+    __host__ __device__ BVHNode(Hittable **list, int start, int end, curandState *rand) {
         auto objects = list;
 
         auto axis = Random::_double(rand);
@@ -35,13 +34,7 @@ public:
                 right = objects[start];
             }
         } else {
-#ifdef __CUDA_ARCH__
-            auto policy = thrust::device;
-#else
-            auto policy = thrust::host;
-#endif
-            thrust::sort(policy, objects.begin() + start, objects.begin() + end, comparator);
-            //std::sort(objects.begin() + start, objects.begin() + end, comparator);
+            std::sort(objects + start, objects + end, comparator);
 
             auto mid = start + object_span / 2;
 
@@ -61,11 +54,6 @@ public:
         return hit_left || hit_right;
     }
 
-
-    [[nodiscard]] __host__ __device__ AABB bounding_box() const override {
-        return bbox;
-    }
-
     static bool box_compare(const Hittable *a, const Hittable *b, int axis_index) {
         return a->bounding_box().index(axis_index).min_ < b->bounding_box().index(axis_index).min_;
     }
@@ -76,4 +64,17 @@ public:
 
     static bool box_z_compare(const Hittable *a, const Hittable *b) { return box_compare(a, b, 2); }
 
+
+    __host__ __device__ void dev_sort(Hittable **a, Hittable **b,
+                                      bool (*comparator)(Hittable *a, Hittable *b)) {
+        for (int i = 0; a + i < b; i++) {
+            for (int j = 0; a + j < b; j++) {
+                if (!((*comparator)(*(a + i), *(a + j)))) {
+                     Hittable *tmp = *(a + i);
+                    *(a + i) = *(a + j);
+                    *(a + j) = tmp;
+                }
+            }
+        }
+    }
 };

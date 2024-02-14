@@ -23,7 +23,7 @@ public:
     virtual ~Material() = default;
 
     __host__ __device__ virtual bool
-    scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray, curandState *rand) const = 0;
+    __host__ __device__ scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray, curandState *rand) const = 0;
 };
 
 
