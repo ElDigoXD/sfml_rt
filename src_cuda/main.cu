@@ -98,7 +98,7 @@ public:
         //camera.light = {0, 10, 10};
         //camera.light_color = {1, 1, 1};
 
-        world = CPUScene::shuttle(camera);
+        world = CPUScene::hologram(camera);
     }
 
     void run() {

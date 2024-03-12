@@ -16,6 +16,7 @@ add_executable(p_exe
         third-party/tiny_obj_loader.h
         obj.h
         BVHNode.h
+        HoloCamera.h
 )
 
 set_target_properties(p_exe PROPERTIES
@@ -41,6 +42,7 @@ add_executable(test_exe
         third-party/tiny_obj_loader.h
         obj.h
         BVHNode.h
+        HoloCamera.h
 )
 
 set_target_properties(test_exe PROPERTIES
@@ -67,6 +69,7 @@ add_executable(c_exe
         third-party/tiny_obj_loader.h
         obj.h
         BVHNode.h
+        HoloCamera.h
 )
 
 set_target_properties(c_exe PROPERTIES
@@ -97,6 +100,7 @@ add_executable(gui_exe
         third-party/tiny_obj_loader.h
         obj.h
         BVHNode.h
+        HoloCamera.h
 )
 
 target_compile_definitions(gui_exe PRIVATE IS_SFML)

@@ -1,11 +1,9 @@
 #pragma once
 
-#include "Vec3.h"
 #include "Ray.h"
 #include "HittableList.h"
-#include <iostream>
-#include <random>
-#include <cstring>
+#include "Hittable.h"
+#include <complex>
 
 class Camera {
 public:
@@ -42,8 +40,10 @@ private:
     Vec3 defocus_disk_x;
     Vec3 defocus_disk_y;
     Vec3 viewport_upper_left;
+    Vec3 viewport_upper_left_cgh;
 
     Point3 pixel_00_location;
+    Point3 pixel_00_location_cgh;
 
 
 public:
@@ -97,7 +97,10 @@ public:
         pixel_delta_y = viewport_y / height;
 
         viewport_upper_left = camera_center - (focus_dist * w) - viewport_x / 2 - viewport_y / 2;
+        viewport_upper_left_cgh = camera_center - viewport_x / 2 - viewport_y / 2;
+
         pixel_00_location = viewport_upper_left + 0.5 * (pixel_delta_x + pixel_delta_y);
+        pixel_00_location_cgh = viewport_upper_left_cgh + 0.5 * (pixel_delta_x + pixel_delta_y);
 
         auto defocus_radius = focus_dist * tan(degrees_to_radians(defocus_angle / 2));
         defocus_disk_x = u * defocus_radius;
@@ -126,7 +129,7 @@ public:
         return Ray(ray_origin, pixel_sample - ray_origin);
     }
 */
-    __host__ __device__ Ray get_ray_at(int i, int j) {
+    [[nodiscard]] __host__ __device__ Ray get_ray_at(int i, int j) const {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto ray_origin = camera_center;
 
@@ -174,7 +177,7 @@ public:
         }
     }
 
-    void render_color_line(Color pixels[], HittableList **world, int line) {
+    void render_color_line(Color pixels[], HittableList **world, int line) const {
         for (int i = 0; i < image_width; ++i) {
             Color pixel_color = Color(0, 0, 0);
             for (int sample = 0; sample < samples_per_pixel; ++sample) {

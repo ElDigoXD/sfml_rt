@@ -6,6 +6,7 @@
 #include "Triangle.h"
 #include "obj.h"
 #include "BVHNode.h"
+#include "HoloCamera.h"
 
 #define create_scene(name, length)                                                                                                                               \
                                                                                                                                                                  \
@@ -325,5 +326,20 @@ namespace CPUScene {
         auto root = new BVHNode(d_list, d_list_length / 3, nullptr);
 
         return new HittableList(new Hittable *[]{(Hittable *) root}, 1);
+    }
+
+    HittableList *hologram(HoloCamera &d_camera) {
+        auto d_list = new Hittable *[2];
+        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12), 1.5, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
+        d_list[1] = new Sphere(Vec3(1, -0.25, -1), 1, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
+
+        d_camera.light = {5, 5, 10};
+        d_camera.light_color = {1, 0, 0};
+        d_camera.diffuse_intensity = 1;
+        d_camera.specular_intensity = 0;
+
+        // d_camera.update();
+
+        return new HittableList(d_list, 2);
     }
 }
