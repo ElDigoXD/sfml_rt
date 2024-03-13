@@ -95,6 +95,11 @@ public:
     __host__ __device__ void update(int width, int height) {
         camera_center = Point3(0, 0, slm_z);
 
+        slm_width_px = width;
+        slm_height_px = height;
+
+        h_slm_size = slm_pixel_size * (slm_width_px - 1) / 2;
+        v_slm_size = slm_pixel_size * (slm_height_px - 1) / 2;
 
         w = (look_from - look_at).normalize();
         u = cross(Vec3(0, 1, 0), w).normalize();
@@ -130,7 +135,7 @@ public:
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
-    std::vector<Point3> generate_point_clouds(HittableList **world) const {
+    std::vector<Point3> generate_point_cloud(HittableList **world) const {
         auto point_cloud = std::vector<Point3>();
         HitRecord record;
         Ray ray;
@@ -166,9 +171,22 @@ public:
     };
     int shinyness = 1000;
 
-    void render_CGH(std::complex<double> pixels[], HittableList **world) const {
+    void render_CGH_line(
+            std::complex<double> pixels[], HittableList **world, const std::vector<Point3> &point_cloud, int j) const {
 
-        auto point_cloud = generate_point_clouds(world);
+        for (int i = 0; i < slm_width_px; ++i) {
+            auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
+
+            for (const auto &point: point_cloud) {
+                auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
+                const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
+                pixels[i] += cgh;
+            }
+            pixels[i] /= (slm_width_px * slm_height_px * 1.0);
+        }
+    }
+
+    void render_CGH(std::complex<double> pixels[], HittableList **world, const std::vector<Point3> &point_cloud) const {
         for (int j = 0; j < slm_height_px; ++j) {
             for (int i = 0; i < slm_width_px; ++i) {
                 auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);

@@ -19,10 +19,10 @@
 #include "cmath"
 
 int main(int argc, char *argv[]) {
-    int image_width = 256;
-    int image_height = 256;
+    int image_width = 1920;
+    int image_height = 1080;
     int samples_per_pixel = 1;
-    int num_threads = 1;
+    int num_threads = std::thread::hardware_concurrency() - 2;
     if (argc != 1) {
         if (argc > 1) {
             samples_per_pixel = std::atoi(argv[1]);
@@ -53,12 +53,18 @@ int main(int argc, char *argv[]) {
     auto start = time(nullptr);
 
     auto *pixels_complex = new std::complex<double>[image_width * image_height];
-    camera.render_CGH(pixels_complex, &world);
+    auto point_cloud = camera.generate_point_cloud(&world);
+    // camera.render_CGH(pixels_complex, &world);
+    pool.detach_loop(0, image_height, [camera, &pixels_complex, &world, &point_cloud, image_width](int j) {
+        camera.render_CGH_line(&pixels_complex[j * image_width], &world, point_cloud, j);
+        printf("line %d\n", j);
+    }, 16);
+    pool.wait();
 
     for (int i = 0; i < image_width * image_height; i++) {
-        pixels[i * 4 + 0] = std::arg(pixels_complex[i]) / (2 * M_PI) * 255;
-        pixels[i * 4 + 1] = std::arg(pixels_complex[i]) / (2 * M_PI) * 255;
-        pixels[i * 4 + 2] = std::arg(pixels_complex[i]) / (2 * M_PI) * 255;
+        pixels[i * 4 + 0] = (std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255;
+        pixels[i * 4 + 1] = (std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255;
+        pixels[i * 4 + 2] = (std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255;
         pixels[i * 4 + 3] = 255;
     }
 
