@@ -15,14 +15,13 @@
 
 #include "Scene.h"
 
-#include "curand.h"
 #include "cmath"
 
 int main(int argc, char *argv[]) {
     int image_width = 1920;
     int image_height = 1080;
     int samples_per_pixel = 1;
-    int num_threads = std::thread::hardware_concurrency() - 2;
+    int num_threads = 1;
     if (argc != 1) {
         if (argc > 1) {
             samples_per_pixel = std::atoi(argv[1]);
@@ -38,8 +37,6 @@ int main(int argc, char *argv[]) {
 
     unsigned char pixels[image_width * image_height * 4];
     auto camera = HoloCamera(image_width, image_height, samples_per_pixel, 10);
-
-    curandCreateGeneratorHost(&Random::l_rand, curandRngType::CURAND_RNG_PSEUDO_DEFAULT);
 
     HittableList *world;
     world = CPUScene::hologram(camera);
@@ -68,12 +65,6 @@ int main(int argc, char *argv[]) {
         pixels[i * 4 + 3] = 255;
     }
 
-    /*
-    pool.detach_loop(0, image_height, [camera, &pixels, &world](int j) {
-        camera.render_pixel_line(&pixels[j * camera.image_width * 4], &world, (int) j);
-    }, 50);
-    pool.wait();
-    */
     auto end = time(nullptr);
     auto duration = end - start;
 

@@ -17,6 +17,7 @@ add_executable(p_exe
         obj.h
         BVHNode.h
         HoloCamera.h
+        third-party/stb_image.h
 )
 
 set_target_properties(p_exe PROPERTIES
@@ -25,29 +26,14 @@ target_link_libraries(p_exe -lcurand)
 
 target_compile_definitions(p_exe PRIVATE PROFILE)
 add_executable(test_exe
-        AABB.h
-        Camera.h
-        Hittable.h
-        HittableList.h
-        Interval.h
-        Material.h
-        Ray.h
-        Sphere.h
-        Vec3.h
-        test.cu
-        utils.h
-        third-party/BS_thread_pool.h
+        test.cpp
         third-party/stb_image_write.h
-        Triangle.h
-        third-party/tiny_obj_loader.h
-        obj.h
-        BVHNode.h
-        HoloCamera.h
+        third-party/stb_image.h
 )
 
 set_target_properties(test_exe PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
-target_link_libraries(p_exe -lcurand)
+# target_compile_options(test_exe PRIVATE -I/usr/include/opencv4)
 
 target_compile_definitions(test_exe PRIVATE PROFILE)
 
@@ -70,6 +56,8 @@ add_executable(c_exe
         obj.h
         BVHNode.h
         HoloCamera.h
+        third-party/stb_image.h
+        third-party/stb_image.h
 )
 
 set_target_properties(c_exe PROPERTIES
@@ -101,6 +89,7 @@ add_executable(gui_exe
         obj.h
         BVHNode.h
         HoloCamera.h
+        third-party/stb_image.h
 )
 
 target_compile_definitions(gui_exe PRIVATE IS_SFML)

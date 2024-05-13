@@ -10,14 +10,14 @@ set(CMAKE_CXX_COMPILER /usr/bin/clang++-16)
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CUDAToolkit_ROOT /usr/local/cuda-12.3/bin)
-set(CMAKE_CUDA_COMPILER  ${CUDAToolkit_ROOT}/nvcc)
+set(CMAKE_CUDA_COMPILER ${CUDAToolkit_ROOT}/nvcc)
 set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
 set(CMAKE_CUDA_ARCHITECTURES "native")
 set(USE_NATIVE_ARCH)
 
 set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "--generate-line-info -Xcompiler -march=native -Xcompiler --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/12 --diag-suppress 549 --diag-suppress 177")
 
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -lfftw3 -lm") #
 #include(FindFreetype)
 
 project(sfml_rt LANGUAGES CXX CUDA)
