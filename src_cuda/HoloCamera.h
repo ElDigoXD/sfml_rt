@@ -5,14 +5,16 @@
 #include "Hittable.h"
 #include <complex>
 
+
 class HoloCamera {
 
 public:
     int samples_per_pixel;
 
     int max_depth;
+    const double mm = 1e-3;
 
-    Point3 look_from = Point3(0, 0, 200);
+    Point3 look_from = Point3(0, 0, 200) * mm;
     Point3 look_at = Point3(0, 0, 0);
 
     Vec3 u, v, w;
@@ -21,9 +23,8 @@ public:
 
 private:
     // Holo stuff
-    double wavelength = 0.6328e-3;
-    double slm_z = 200;
-    double screen_size = 4;
+    double wavelength = 0.6328e-6;
+    double slm_z = 200 * mm;
 
     int screen_width = 16;
     int screen_height = 16;
@@ -34,14 +35,15 @@ private:
     //int slm_width_px = 256;
     //int slm_height_px = 256;
 
-    double slm_pixel_size = 8e-3;
+    double slm_pixel_size = 8e-6;
 
-    double pixel_size = screen_size / screen_width;
-    double h_screen_size = pixel_size * (screen_width - 1) / 2;
-    double v_screen_size = pixel_size * (screen_height - 1) / 2;
+    double screen_size = slm_pixel_size * slm_width_px;
+    double screen_pixel_size = screen_size / screen_width;
+    double h_screen_size = screen_pixel_size * (screen_width - 1) / 2;
+    double v_screen_size = screen_pixel_size * (screen_height - 1) / 2;
 
-    double h_slm_size = slm_pixel_size * (slm_width_px - 1) / 2;
-    double v_slm_size = slm_pixel_size * (slm_height_px - 1) / 2;
+    double h_slm_size;
+    double v_slm_size;
 
 
     // Normal stuff
@@ -123,9 +125,6 @@ public:
 
         slm_upper_left = camera_center - slm_x / 2 - slm_y / 2;
         slm_pixel_00_location = slm_upper_left + 0.5 * (slm_pixel_delta_x + slm_pixel_delta_y);
-
-        std::printf("slm pixel size: %f\n", slm_pixel_size);
-        std::printf("slm pixel delta x: %f\n", slm_pixel_delta_x.x);
     }
 
     [[nodiscard]] __host__ __device__ Ray get_ray_at(int i, int j) const {
@@ -142,7 +141,7 @@ public:
         for (int j = 0; j < screen_height; ++j) {
             for (int i = 0; i < screen_width; ++i) {
                 ray = get_ray_at(i, j);
-                if (!(*world)->hit(ray, Interval(0.001, infinity), record)) {
+                if (!(*world)->hit(ray, Interval(0.0000001, infinity), record)) {
                     continue;
                 }
                 point_cloud.push_back(record.p);
@@ -217,7 +216,7 @@ public:
         auto po_distance = 0.0;
 
 
-        while ((*world)->hit(cur_ray, Interval(0.001, infinity), record)) {
+        while ((*world)->hit(cur_ray, Interval(0.0000001, infinity), record)) {
             // Ray does not escape, so it's represented as black
             if (cur_depth-- <= 0) break;
 

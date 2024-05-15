@@ -201,7 +201,7 @@ public:
         if (depth <= 0)
             return (Colors::black());
 
-        if (world.hit(ray, Interval(0.001, infinity), record)) {
+        if (world.hit(ray, Interval(0.0000001, infinity), record)) {
             Ray scattered_ray;
             Color attenuation;
             if (record.material->scatter(ray, record, attenuation, scattered_ray, nullptr)) {
@@ -237,7 +237,7 @@ public:
         Ray scattered_ray;
         bool has_point_light = light != Color{0, 0, 0};
 
-        while ((*world)->hit(cur_ray, Interval(0.001, infinity), record)) {
+        while ((*world)->hit(cur_ray, Interval(0.0000001, infinity), record)) {
             // Ray does not escape, so it's represented as black
             if (cur_depth-- <= 0) break;
 

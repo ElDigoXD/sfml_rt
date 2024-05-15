@@ -38,6 +38,10 @@ int main(int argc, char *argv[]) {
     }
 
 
+    //image_width = 256;
+    //image_height = 256;
+
+
     unsigned char pixels[image_width * image_height];
     auto camera = HoloCamera(image_width, image_height, samples_per_pixel, 10);
 
@@ -47,8 +51,9 @@ int main(int argc, char *argv[]) {
 
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
 
-    std::cerr << "Rendering a " << image_width << "x" << image_height << " hologram with " << camera.samples_per_pixel
-              << " samples per pixel " << "with " << pool.get_thread_count() << " threads.\n";
+    std::cout << "Rendering a " << image_width << "x" << image_height << " hologram with " << camera.samples_per_pixel
+              << " samples per pixel with " << pool.get_thread_count() << " threads.\n";
+    std::cout << "Camera: " << camera.look_at.z << std::endl;
 
     auto start = time(nullptr);
 
@@ -74,7 +79,7 @@ int main(int argc, char *argv[]) {
                                  camera.samples_per_pixel, camera.max_depth, pool.get_thread_count(),
                                  duration);
     }
-    stbi_write_png(filename.c_str(), image_width, image_height, 4, pixels, 0);
+    stbi_write_png(filename.c_str(), image_width, image_height, 1, pixels, 0);
     std::cerr << "Rendered in " << duration << "s" << std::endl;
 
     if (ENABLE_AMPLITUDE) {
