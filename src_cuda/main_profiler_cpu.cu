@@ -17,6 +17,8 @@
 
 #include "cmath"
 
+bool ENABLE_AMPLITUDE = true;
+
 int main(int argc, char *argv[]) {
     int image_width = 1920;
     int image_height = 1080;
@@ -35,7 +37,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    unsigned char pixels[image_width * image_height * 4];
+
+    unsigned char pixels[image_width * image_height];
     auto camera = HoloCamera(image_width, image_height, samples_per_pixel, 10);
 
     HittableList *world;
@@ -44,56 +47,58 @@ int main(int argc, char *argv[]) {
 
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
 
-    std::cerr << "Rendering a " << image_width << "x" << image_height << " image with " << camera.samples_per_pixel
+    std::cerr << "Rendering a " << image_width << "x" << image_height << " hologram with " << camera.samples_per_pixel
               << " samples per pixel " << "with " << pool.get_thread_count() << " threads.\n";
 
     auto start = time(nullptr);
 
     auto *pixels_complex = new std::complex<double>[image_width * image_height];
     auto point_cloud = camera.generate_point_cloud(&world);
-    // camera.render_CGH(pixels_complex, &world);
-    pool.detach_loop(0, image_height, [camera, &pixels_complex, &world, &point_cloud, image_width](int j) {
-        camera.render_CGH_line(&pixels_complex[j * image_width], &world, point_cloud, j);
-        printf("line %d\n", j);
-    }, 16);
-    pool.wait();
+    camera.render_CGH(pixels_complex, &world, point_cloud);
 
+    // std::arg -> If no errors occur, this is the phase angle of z in the interval [−π; π].
+    // [-pi, pi] -> [0, 2pi] -> [0, 1] -> [0, 255]
     for (int i = 0; i < image_width * image_height; i++) {
-        pixels[i * 4 + 0] = (std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255;
-        pixels[i * 4 + 1] = (std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255;
-        pixels[i * 4 + 2] = (std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255;
-        pixels[i * 4 + 3] = 255;
+        pixels[i] = static_cast<unsigned char>((std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255);
     }
 
     auto end = time(nullptr);
     auto duration = end - start;
 
-    stbi_write_png(string_format("ph_%dx%d_%d_%d_%dcpu_%.1ld.png", image_height, image_width,
-                                 camera.samples_per_pixel, camera.max_depth, pool.get_thread_count(), duration).c_str(),
-                   image_width, image_height, 4, pixels, 0);
+    std::string filename;
 
+    if (image_width == 1920 && image_height == 1080 && camera.samples_per_pixel == 1 && camera.max_depth == 10) {
+        filename = string_format("ph_%dcpu_%.1lds.png", pool.get_thread_count(), duration);
+    } else {
+        filename = string_format("ph_%dx%d_%d_%d_%dcpu_%.1ld.png", image_height, image_width,
+                                 camera.samples_per_pixel, camera.max_depth, pool.get_thread_count(),
+                                 duration);
+    }
+    stbi_write_png(filename.c_str(), image_width, image_height, 4, pixels, 0);
     std::cerr << "Rendered in " << duration << "s" << std::endl;
 
-    auto min = std::abs(
-            *std::min_element(pixels_complex, pixels_complex + image_width * image_height, [](auto a, auto b) {
-                return std::abs(a) < std::abs(b);
-            }));
+    if (ENABLE_AMPLITUDE) {
 
-    auto max = std::abs(
-            *std::max_element(pixels_complex, pixels_complex + image_width * image_height, [](auto a, auto b) {
-                return std::abs(a) < std::abs(b);
-            }));
+        auto min = std::abs(
+                *std::min_element(pixels_complex, pixels_complex + image_width * image_height, [](auto a, auto b) {
+                    return std::abs(a) < std::abs(b);
+                }));
 
-    for (int i = 0; i < image_width * image_height; i++) {
-        pixels[i * 4 + 0] = static_cast<unsigned char>((std::abs(pixels_complex[i]) - min) / (max - min) * 255);
-        pixels[i * 4 + 1] = static_cast<unsigned char>((std::abs(pixels_complex[i]) - min) / (max - min) * 255);
-        pixels[i * 4 + 2] = static_cast<unsigned char>((std::abs(pixels_complex[i]) - min) / (max - min) * 255);
-        pixels[i * 4 + 3] = 255;
+        auto max = std::abs(
+                *std::max_element(pixels_complex, pixels_complex + image_width * image_height, [](auto a, auto b) {
+                    return std::abs(a) < std::abs(b);
+                }));
+
+        for (int i = 0; i < image_width * image_height; i++) {
+            pixels[i] = static_cast<unsigned char>((std::abs(pixels_complex[i]) - min) / (max - min) * 255);
+        }
+
+        stbi_write_png(string_format("amp_%dx%d_%d_%d_%dcpu_%.1ld.png", image_height, image_width,
+                                     camera.samples_per_pixel, camera.max_depth, pool.get_thread_count(),
+                                     duration).c_str(),
+                       image_width, image_height, 1, pixels, 0);
+
     }
 
-    stbi_write_png(string_format("amp_%dx%d_%d_%d_%dcpu_%.1ld.png", image_height, image_width,
-                                 camera.samples_per_pixel, camera.max_depth, pool.get_thread_count(), duration).c_str(),
-                   image_width, image_height, 4, pixels, 0);
-
-
+    return 0;
 }
