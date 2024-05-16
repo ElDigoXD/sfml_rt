@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Rendering a " << image_width << "x" << image_height << " hologram with " << camera.samples_per_pixel
               << " samples per pixel with " << pool.get_thread_count() << " threads.\n";
-    std::cout << "Camera: " << camera.look_at.z << std::endl;
+
+    camera.print_properties();
 
     auto start = time(nullptr);
 

@@ -23,28 +23,22 @@ public:
 
 private:
     // Holo stuff
-    double wavelength = 0.6328e-6;
-    double slm_z = 200 * mm;
+    const double wavelength = 0.6328e-6;
+    // Focal distance
+    const double slm_z = 200 * mm;
 
-    int screen_width = 16;
-    int screen_height = 16;
+    // Slm screen
+    int slm_width_in_px;
+    int slm_height_in_px;
 
-    int slm_width_px = 256;
-    int slm_height_px = 256;
+    // Point cloud screen
+    const int screen_height_in_px = 16;
+    const int screen_width_in_px = std::floor(screen_height_in_px * 1.77);
 
     //int slm_width_px = 256;
     //int slm_height_px = 256;
 
-    double slm_pixel_size = 8e-6;
-
-    double screen_size = slm_pixel_size * slm_width_px;
-    double screen_pixel_size = screen_size / screen_width;
-    double h_screen_size = screen_pixel_size * (screen_width - 1) / 2;
-    double v_screen_size = screen_pixel_size * (screen_height - 1) / 2;
-
-    double h_slm_size;
-    double v_slm_size;
-
+    const double slm_pixel_size = 8e-6;
 
     // Normal stuff
 
@@ -53,15 +47,6 @@ private:
 
     Vec3 slm_pixel_delta_x;
     Vec3 slm_pixel_delta_y;
-
-    Vec3 screen_x;
-    Vec3 screen_y;
-
-    Vec3 slm_x;
-    Vec3 slm_y;
-
-    Vec3 screen_upper_left;
-    Vec3 slm_upper_left;
 
     Point3 screen_pixel_00_location;
     Point3 slm_pixel_00_location;
@@ -85,49 +70,56 @@ public:
             HoloCamera(_image_width, _image_height, 1, 3) {}
 
     __host__ __device__ HoloCamera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
-            : slm_width_px(_image_width),
-              slm_height_px(_image_height),
+            : slm_width_in_px(_image_width),
+              slm_height_in_px(_image_height),
               samples_per_pixel(_samples_per_pixel),
               max_depth(_max_depth) {
         update();
     }
 
-    __host__ __device__ void update() { update(slm_width_px, slm_height_px); }
+    __host__ __device__ void update() { update(slm_width_in_px, slm_height_in_px); }
 
     __host__ __device__ void update(int width, int height) {
         camera_center = Point3(0, 0, slm_z);
 
-        slm_width_px = width;
-        slm_height_px = height;
+        // SLM screen
+        slm_width_in_px = width;
+        slm_height_in_px = height;
 
-        h_slm_size = slm_pixel_size * (slm_width_px - 1) / 2;
-        v_slm_size = slm_pixel_size * (slm_height_px - 1) / 2;
+        // SLM "real" size: 8.64 x 15.36 mm
+        double h_slm_size = slm_pixel_size * (slm_width_in_px - 1) / 2;
+        double v_slm_size = slm_pixel_size * (slm_height_in_px - 1) / 2;
+
+        // Point cloud screen
+        double h_screen_pixel_size = slm_pixel_size * slm_width_in_px / screen_width_in_px;
+        double v_screen_pixel_size = slm_pixel_size * slm_height_in_px / screen_height_in_px;
+        double h_screen_size = h_screen_pixel_size * (screen_width_in_px - 1) / 2;
+        double v_screen_size = v_screen_pixel_size * (screen_height_in_px - 1) / 2;
 
         w = (look_from - look_at).normalize();
         u = cross(Vec3(0, 1, 0), w).normalize();
         v = cross(w, u);
 
+        Vec3 screen_x = h_screen_size * u;
+        Vec3 screen_y = v_screen_size * -v;
 
-        screen_x = h_screen_size * u;
-        screen_y = v_screen_size * -v;
+        screen_pixel_delta_x = screen_x / screen_width_in_px;
+        screen_pixel_delta_y = screen_y / screen_height_in_px;
 
-        screen_pixel_delta_x = screen_x / screen_width;
-        screen_pixel_delta_y = screen_y / screen_height;
-
-        screen_upper_left = camera_center - (slm_z * w) - screen_x / 2 - screen_y / 2;
+        Vec3 screen_upper_left = camera_center - (slm_z * w) - screen_x / 2 - screen_y / 2;
         screen_pixel_00_location = screen_upper_left + 0.5 * (screen_pixel_delta_x + screen_pixel_delta_y);
 
-        slm_x = h_slm_size * u;
-        slm_y = v_slm_size * -v;
+        Vec3 slm_x = h_slm_size * u;
+        Vec3 slm_y = v_slm_size * -v;
 
-        slm_pixel_delta_x = slm_x / slm_width_px;
-        slm_pixel_delta_y = slm_y / slm_height_px;
+        slm_pixel_delta_x = slm_x / slm_width_in_px;
+        slm_pixel_delta_y = slm_y / slm_height_in_px;
 
-        slm_upper_left = camera_center - slm_x / 2 - slm_y / 2;
+        Vec3 slm_upper_left = camera_center - slm_x / 2 - slm_y / 2;
         slm_pixel_00_location = slm_upper_left + 0.5 * (slm_pixel_delta_x + slm_pixel_delta_y);
     }
 
-    [[nodiscard]] __host__ __device__ Ray get_ray_at(int i, int j) const {
+    [[nodiscard]] __host__ __device__ Ray get_ray_at_screen(int i, int j) const {
         auto pixel_center = screen_pixel_00_location + (i * screen_pixel_delta_x) + (j * screen_pixel_delta_y);
         auto ray_origin = camera_center;
 
@@ -138,9 +130,9 @@ public:
         auto point_cloud = std::vector<Point3>();
         HitRecord record;
         Ray ray;
-        for (int j = 0; j < screen_height; ++j) {
-            for (int i = 0; i < screen_width; ++i) {
-                ray = get_ray_at(i, j);
+        for (int j = 0; j < screen_height_in_px; ++j) {
+            for (int i = 0; i < screen_width_in_px; ++i) {
+                ray = get_ray_at_screen(i, j);
                 if (!(*world)->hit(ray, Interval(0.0000001, infinity), record)) {
                     continue;
                 }
@@ -173,7 +165,7 @@ public:
     void render_CGH_line(
             std::complex<double> pixels[], HittableList **world, const std::vector<Point3> &point_cloud, int j) const {
 
-        for (int i = 0; i < slm_width_px; ++i) {
+        for (int i = 0; i < slm_width_in_px; ++i) {
             auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
 
             for (const auto &point: point_cloud) {
@@ -181,21 +173,21 @@ public:
                 const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
                 pixels[i] += cgh;
             }
-            pixels[i] /= (slm_width_px * slm_height_px * 1.0);
+            pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
         }
     }
 
     void render_CGH(std::complex<double> pixels[], HittableList **world, const std::vector<Point3> &point_cloud) const {
-        for (int j = 0; j < slm_height_px; ++j) {
-            for (int i = 0; i < slm_width_px; ++i) {
+        for (int j = 0; j < slm_height_in_px; ++j) {
+            for (int i = 0; i < slm_width_in_px; ++i) {
                 auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
 
                 for (auto &point: point_cloud) {
                     auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
                     const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
-                    pixels[i + j * slm_width_px] += cgh;
+                    pixels[i + j * slm_width_in_px] += cgh;
                 }
-                pixels[i + j * slm_width_px] /= (slm_width_px * slm_height_px * 1.0);
+                pixels[i + j * slm_width_in_px] /= (slm_width_in_px * slm_height_in_px * 1.0);
             }
             if (j % 100 == 0) {
                 std::printf("line %d\n", j);
@@ -247,5 +239,24 @@ public:
         auto sub_phase_c = std::exp(static_cast<std::complex<double>>(1.0i * sub_phase));
         auto sub_cgh_ray = (sub_image.r * sub_phase_c);
         return sub_cgh_ray;
+    }
+
+    void print_properties() const {
+        std::printf("wavelength: %f\n", wavelength);
+        std::printf("slm_pixel_size: %f\n", slm_pixel_size);
+        std::printf("slm_width_in_px: %d\n", slm_width_in_px);
+        std::printf("slm_height_in_px: %d\n", slm_height_in_px);
+        std::printf("slm_z: %f\n", slm_z);
+        std::printf("screen_width_in_px: %d\n", screen_width_in_px);
+        std::printf("screen_height_in_px: %d\n", screen_height_in_px);
+        std::printf("camera_center: %f %f %f\n", camera_center.x, camera_center.y, camera_center.z);
+        std::printf("look_from: %f %f %f\n", look_from.x, look_from.y, look_from.z);
+        std::printf("look_at: %f %f %f\n", look_at.x, look_at.y, look_at.z);
+        std::printf("light_color: %f %f %f\n", light_color.r, light_color.g, light_color.b);
+        std::printf("diffuse_intensity: %f\n", diffuse_intensity);
+        std::printf("specular_intensity: %f\n", specular_intensity);
+        std::printf("sky_intensity: %f\n", sky_intensity);
+        std::printf("samples_per_pixel: %d\n", samples_per_pixel);
+        std::printf("max_depth: %d\n", max_depth);
     }
 };
