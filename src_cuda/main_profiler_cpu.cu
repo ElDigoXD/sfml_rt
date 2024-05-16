@@ -62,6 +62,11 @@ int main(int argc, char *argv[]) {
     auto point_cloud = camera.generate_point_cloud(&world);
     camera.render_CGH(pixels_complex, &world, point_cloud);
 
+    // pool.detach_loop(0, image_height, [&](int j) {
+    //     camera.render_CGH_line(&pixels_complex[j * image_width], &world, point_cloud, j);
+    // }, 50);
+    // pool.wait();
+
     // std::arg -> If no errors occur, this is the phase angle of z in the interval [−π; π].
     // [-pi, pi] -> [0, 2pi] -> [0, 1] -> [0, 255]
     for (int i = 0; i < image_width * image_height; i++) {

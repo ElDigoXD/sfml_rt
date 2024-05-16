@@ -32,7 +32,7 @@ private:
     int slm_height_in_px;
 
     // Point cloud screen
-    const int screen_height_in_px = 16;
+    const int screen_height_in_px = 32;
     const int screen_width_in_px = std::floor(screen_height_in_px * 1.77);
 
     //int slm_width_px = 256;
@@ -87,14 +87,17 @@ public:
         slm_height_in_px = height;
 
         // SLM "real" size: 8.64 x 15.36 mm
-        double h_slm_size = slm_pixel_size * (slm_width_in_px - 1) / 2;
-        double v_slm_size = slm_pixel_size * (slm_height_in_px - 1) / 2;
+        double h_slm_size = slm_pixel_size * (slm_width_in_px );
+        double v_slm_size = slm_pixel_size * (slm_height_in_px);
 
         // Point cloud screen
         double h_screen_pixel_size = slm_pixel_size * slm_width_in_px / screen_width_in_px;
         double v_screen_pixel_size = slm_pixel_size * slm_height_in_px / screen_height_in_px;
-        double h_screen_size = h_screen_pixel_size * (screen_width_in_px - 1) / 2;
-        double v_screen_size = v_screen_pixel_size * (screen_height_in_px - 1) / 2;
+        double h_screen_size = h_screen_pixel_size * (screen_width_in_px );
+        double v_screen_size = v_screen_pixel_size * (screen_height_in_px );
+
+        printf("screen size: %f %f\n", h_screen_size, v_screen_size);
+        printf("slm size: %f %f\n", h_slm_size, v_slm_size);
 
         w = (look_from - look_at).normalize();
         u = cross(Vec3(0, 1, 0), w).normalize();
@@ -246,16 +249,16 @@ public:
         std::printf("slm_pixel_size: %f\n", slm_pixel_size);
         std::printf("slm_width_in_px: %d\n", slm_width_in_px);
         std::printf("slm_height_in_px: %d\n", slm_height_in_px);
-        std::printf("slm_z: %f\n", slm_z);
+        std::printf("slm_z: %.3f\n", slm_z);
         std::printf("screen_width_in_px: %d\n", screen_width_in_px);
         std::printf("screen_height_in_px: %d\n", screen_height_in_px);
-        std::printf("camera_center: %f %f %f\n", camera_center.x, camera_center.y, camera_center.z);
-        std::printf("look_from: %f %f %f\n", look_from.x, look_from.y, look_from.z);
-        std::printf("look_at: %f %f %f\n", look_at.x, look_at.y, look_at.z);
-        std::printf("light_color: %f %f %f\n", light_color.r, light_color.g, light_color.b);
-        std::printf("diffuse_intensity: %f\n", diffuse_intensity);
-        std::printf("specular_intensity: %f\n", specular_intensity);
-        std::printf("sky_intensity: %f\n", sky_intensity);
+        std::printf("camera_center: %.3f %.3f %.3f\n", camera_center.x, camera_center.y, camera_center.z);
+        std::printf("look_from: %.3f %.3f %.3f\n", look_from.x, look_from.y, look_from.z);
+        std::printf("look_at: %.3f %.3f %.3f\n", look_at.x, look_at.y, look_at.z);
+        std::printf("light_color: %.3f %.3f %.3f\n", light_color.r, light_color.g, light_color.b);
+        std::printf("diffuse_intensity: %.3f\n", diffuse_intensity);
+        std::printf("specular_intensity: %.3f\n", specular_intensity);
+        std::printf("sky_intensity: %.3f\n", sky_intensity);
         std::printf("samples_per_pixel: %d\n", samples_per_pixel);
         std::printf("max_depth: %d\n", max_depth);
     }
