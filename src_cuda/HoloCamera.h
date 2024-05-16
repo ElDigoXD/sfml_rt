@@ -87,14 +87,14 @@ public:
         slm_height_in_px = height;
 
         // SLM "real" size: 8.64 x 15.36 mm
-        double h_slm_size = slm_pixel_size * (slm_width_in_px );
+        double h_slm_size = slm_pixel_size * (slm_width_in_px);
         double v_slm_size = slm_pixel_size * (slm_height_in_px);
 
         // Point cloud screen
         double h_screen_pixel_size = slm_pixel_size * slm_width_in_px / screen_width_in_px;
         double v_screen_pixel_size = slm_pixel_size * slm_height_in_px / screen_height_in_px;
-        double h_screen_size = h_screen_pixel_size * (screen_width_in_px );
-        double v_screen_size = v_screen_pixel_size * (screen_height_in_px );
+        double h_screen_size = h_screen_pixel_size * (screen_width_in_px);
+        double v_screen_size = v_screen_pixel_size * (screen_height_in_px);
 
         printf("screen size: %f %f\n", h_screen_size, v_screen_size);
         printf("slm size: %f %f\n", h_slm_size, v_slm_size);
@@ -181,6 +181,7 @@ public:
     }
 
     void render_CGH(std::complex<double> pixels[], HittableList **world, const std::vector<Point3> &point_cloud) const {
+#pragma omp parallel for default(shared) num_threads(12)
         for (int j = 0; j < slm_height_in_px; ++j) {
             for (int i = 0; i < slm_width_in_px; ++i) {
                 auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
