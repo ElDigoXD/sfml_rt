@@ -32,7 +32,7 @@ private:
     int slm_height_in_px;
 
     // Point cloud screen
-    const int screen_height_in_px = 32;
+    const int screen_height_in_px = 16;
     const int screen_width_in_px = std::floor(screen_height_in_px * 1.77);
 
     //int slm_width_px = 256;
@@ -129,7 +129,7 @@ public:
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
-    std::vector<Point3> generate_point_cloud(HittableList **world) const {
+    std::vector<Point3> generate_point_cloud(const HittableList **world) const {
         auto point_cloud = std::vector<Point3>();
         HitRecord record;
         Ray ray;
@@ -166,7 +166,8 @@ public:
     int shinyness = 1000;
 
     void render_CGH_line(
-            std::complex<double> pixels[], HittableList **world, const std::vector<Point3> &point_cloud, int j) const {
+            std::complex<double> pixels[], const HittableList &world, const std::vector<Point3> &point_cloud,
+            int j) const {
 
         for (int i = 0; i < slm_width_in_px; ++i) {
             auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
@@ -180,19 +181,28 @@ public:
         }
     }
 
-    void render_CGH(std::complex<double> pixels[], HittableList **world, const std::vector<Point3> &point_cloud) const {
-#pragma omp parallel for default(shared) num_threads(12)
+    //https://www.alcf.anl.gov/sites/default/files/2020-01/OpenMP_Jose.pdf
+    void render_CGH(std::complex<double> pixels[], const HittableList &world,
+                    const std::vector<Point3> &point_cloud) const {
+
+        std::complex<double> tmp_pixels[slm_width_in_px];
+#pragma omp parallel for firstprivate(point_cloud, world) shared(pixels) private(tmp_pixels) num_threads(2)
+
         for (int j = 0; j < slm_height_in_px; ++j) {
+
             for (int i = 0; i < slm_width_in_px; ++i) {
                 auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
+                // for (auto &point: point_cloud) {
+                if (point_cloud.empty()) { printf("point cloud is empty at line %d\n", j); }
 
-                for (auto &point: point_cloud) {
-                    auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
+                for (int p = 0; p < point_cloud.size(); ++p) {
+                    auto ray = Ray(slm_pixel_center, point_cloud[p] - slm_pixel_center);
                     const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
-                    pixels[i + j * slm_width_in_px] += cgh;
+                    tmp_pixels[i] += cgh;
                 }
-                pixels[i + j * slm_width_in_px] /= (slm_width_in_px * slm_height_in_px * 1.0);
+                tmp_pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
             }
+            std::copy(tmp_pixels, tmp_pixels + slm_width_in_px, pixels + j * slm_width_in_px);
             if (j % 100 == 0) {
                 std::printf("line %d\n", j);
             }
@@ -200,7 +210,7 @@ public:
     }
 
     __host__ std::complex<double>
-    ray_wave_cgh(const Ray &ray, int depth, HittableList **world, curandState *rand) const {
+    ray_wave_cgh(const Ray &ray, int depth, const HittableList &world, curandState *rand) const {
         HitRecord record;
         Color attenuation;
         Color sky_color = Colors::blue_sky();
@@ -212,7 +222,7 @@ public:
         auto po_distance = 0.0;
 
 
-        while ((*world)->hit(cur_ray, Interval(0.0000001, infinity), record)) {
+        while ((world).hit(cur_ray, Interval(0.0000001, infinity), record)) {
             // Ray does not escape, so it's represented as black
             if (cur_depth-- <= 0) break;
 
@@ -221,7 +231,7 @@ public:
             if (!record.material->scatter(cur_ray, record, attenuation, scattered_ray, rand)) break;
             //sky_color = sky_color * attenuation;
 
-            if (has_point_light && !(*world)->hit2(light_ray) &&
+            if (has_point_light && !(world).hit2(light_ray) &&
                 attenuation != Color{1, 1, 1} /* todo: Not dielectric */) {
                 if (dot(scattered_ray.direction(), record.normal) <= 0) break;
 

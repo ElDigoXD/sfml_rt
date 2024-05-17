@@ -48,6 +48,8 @@ int main(int argc, char *argv[]) {
     HittableList *world;
     world = CPUScene::hologram(camera);
 
+    const HittableList *const_world = world;
+
 
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
 
@@ -59,8 +61,8 @@ int main(int argc, char *argv[]) {
     auto start = time(nullptr);
 
     auto *pixels_complex = new std::complex<double>[image_width * image_height];
-    auto point_cloud = camera.generate_point_cloud(&world);
-    camera.render_CGH(pixels_complex, &world, point_cloud);
+    auto point_cloud = camera.generate_point_cloud(&const_world);
+    camera.render_CGH(pixels_complex, *const_world, point_cloud);
 
     // pool.detach_loop(0, image_height, [&](int j) {
     //     camera.render_CGH_line(&pixels_complex[j * image_width], &world, point_cloud, j);
