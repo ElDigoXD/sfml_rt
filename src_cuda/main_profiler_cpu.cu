@@ -1,5 +1,6 @@
 #define THREADS 12
 #define ENABLE_THREAD_POOL
+#define SCREEN_HEIGHT_IN_PX 16
 #undef ENABLE_THREAD_POOL
 
 
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
     auto start = time(nullptr);
 
     auto *pixels_complex = new std::complex<double>[image_width * image_height];
-    auto point_cloud = camera.generate_point_cloud(&const_world);
+    auto point_cloud = camera.generate_point_cloud(*const_world);
 
 #ifndef ENABLE_THREAD_POOL
     camera.render_CGH(pixels_complex, *const_world, point_cloud);

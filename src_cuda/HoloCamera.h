@@ -32,7 +32,7 @@ private:
     int slm_height_in_px;
 
     // Point cloud screen
-    const int screen_height_in_px = 300;
+    const int screen_height_in_px = SCREEN_HEIGHT_IN_PX;
     const int screen_width_in_px = std::floor(screen_height_in_px * 1.77);
 
     //int slm_width_px = 256;
@@ -129,14 +129,14 @@ public:
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
-    std::vector<Point3> generate_point_cloud(const HittableList **world) const {
+    [[nodiscard]] std::vector<Point3> generate_point_cloud(const HittableList &world) const {
         auto point_cloud = std::vector<Point3>();
         HitRecord record;
         Ray ray;
         for (int j = 0; j < screen_height_in_px; ++j) {
             for (int i = 0; i < screen_width_in_px; ++i) {
                 ray = get_ray_at_screen(i, j);
-                if (!(*world)->hit(ray, Interval(0.0000001, infinity), record)) {
+                if (!(world).hit(ray, Interval(0.0000001, infinity), record)) {
                     continue;
                 }
                 point_cloud.push_back(record.p);
@@ -187,10 +187,12 @@ public:
 
     //https://www.alcf.anl.gov/sites/default/files/2020-01/OpenMP_Jose.pdf
     void render_CGH(std::complex<double> pixels[], const HittableList &world,
-                    const std::vector<Point3> &point_cloud) const {
-#ifndef ENABLE_THREAD_POOL
-#pragma omp parallel for firstprivate(point_cloud, world) shared(pixels) num_threads(THREADS)
-#endif
+                    const std::vector<Point3> &point_cloud_off) const {
+
+        auto point_cloud = generate_point_cloud(world);
+
+#pragma omp parallel for default(none) firstprivate(point_cloud, world) shared(pixels) num_threads(THREADS)
+
         for (int j = 0; j < slm_height_in_px; ++j) {
             for (int i = 0; i < slm_width_in_px; ++i) {
                 auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
@@ -198,9 +200,10 @@ public:
                 for (const auto &point: point_cloud) {
                     auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
                     const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
-                    pixels[i] += cgh;
+                    pixels[i + j * slm_width_in_px] += cgh;
                 }
-                pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
+                pixels[i + j * slm_width_in_px] /= (slm_width_in_px * slm_height_in_px * 1.0);
+
             }
             if (j % 100 == 0) {
                 std::printf("line %d\n", j);
