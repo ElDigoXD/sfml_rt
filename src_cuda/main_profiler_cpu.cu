@@ -1,5 +1,6 @@
-#define THREADS 4
+#define THREADS 12
 #define ENABLE_THREAD_POOL
+#undef ENABLE_THREAD_POOL
 
 
 #include "Vec3.h"
@@ -71,7 +72,7 @@ int main(int argc, char *argv[]) {
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
     pool.detach_loop(0, image_height, [&](int j) {
         camera.render_CGH_line(&pixels_complex[j * image_width], *const_world, point_cloud, j);
-    }, num_threads*2);
+    }, num_threads*4);
     pool.wait();
 #endif
 
@@ -87,10 +88,10 @@ int main(int argc, char *argv[]) {
     std::string filename;
 
     if (image_width == 1920 && image_height == 1080 && camera.samples_per_pixel == 1 && camera.max_depth == 10) {
-        filename = string_format("ph_%dcpu_%.1lds.png", pool.get_thread_count(), duration);
+        filename = string_format("ph_%dcpu_%.1lds.png", THREADS, duration);
     } else {
         filename = string_format("ph_%dx%d_%d_%d_%dcpu_%.1ld.png", image_height, image_width,
-                                 camera.samples_per_pixel, camera.max_depth, pool.get_thread_count(),
+                                 camera.samples_per_pixel, camera.max_depth, THREADS,
                                  duration);
     }
     stbi_write_png(filename.c_str(), image_width, image_height, 1, pixels, 0);
@@ -113,7 +114,7 @@ int main(int argc, char *argv[]) {
         }
 
         stbi_write_png(string_format("amp_%dx%d_%d_%d_%dcpu_%.1ld.png", image_height, image_width,
-                                     camera.samples_per_pixel, camera.max_depth, pool.get_thread_count(),
+                                     camera.samples_per_pixel, camera.max_depth, THREADS,
                                      duration).c_str(),
                        image_width, image_height, 1, pixels, 0);
 
