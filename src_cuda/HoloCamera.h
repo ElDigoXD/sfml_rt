@@ -32,7 +32,7 @@ private:
     int slm_height_in_px;
 
     // Point cloud screen
-    const int screen_height_in_px = 16;
+    const int screen_height_in_px = 300;
     const int screen_width_in_px = std::floor(screen_height_in_px * 1.77);
 
     //int slm_width_px = 256;
@@ -185,24 +185,18 @@ public:
     void render_CGH(std::complex<double> pixels[], const HittableList &world,
                     const std::vector<Point3> &point_cloud) const {
 
-        std::complex<double> tmp_pixels[slm_width_in_px];
-#pragma omp parallel for firstprivate(point_cloud, world) shared(pixels) private(tmp_pixels) num_threads(2)
-
+#pragma omp parallel for firstprivate(point_cloud, world) shared(pixels) num_threads(16)
         for (int j = 0; j < slm_height_in_px; ++j) {
-
             for (int i = 0; i < slm_width_in_px; ++i) {
                 auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);
-                // for (auto &point: point_cloud) {
-                if (point_cloud.empty()) { printf("point cloud is empty at line %d\n", j); }
 
-                for (int p = 0; p < point_cloud.size(); ++p) {
-                    auto ray = Ray(slm_pixel_center, point_cloud[p] - slm_pixel_center);
+                for (const auto &point: point_cloud) {
+                    auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
                     const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
-                    tmp_pixels[i] += cgh;
+                    pixels[i] += cgh;
                 }
-                tmp_pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
+                pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
             }
-            std::copy(tmp_pixels, tmp_pixels + slm_width_in_px, pixels + j * slm_width_in_px);
             if (j % 100 == 0) {
                 std::printf("line %d\n", j);
             }

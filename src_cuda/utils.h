@@ -71,8 +71,8 @@ namespace Random {
     }
 
     __host__ double generate_canonical() {
-        return std::rand() / (RAND_MAX + 1.0); // NOLINT(*-msc50-cpp)
-        //return rand_pcg() / (std::numeric_limits<uint32_t>::max() + 1.0);
+        //return std::rand() / (RAND_MAX + 1.0); // NOLINT(*-msc50-cpp)
+        return rand_pcg() / (std::numeric_limits<u_int32_t>::max() + 1.0);
         //return XOrShift32() / (std::numeric_limits<uint32_t>::max() + 1.0);
     }
 
