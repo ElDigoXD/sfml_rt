@@ -178,14 +178,19 @@ public:
                 pixels[i] += cgh;
             }
             pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
+
+        }
+        if (j % 100 == 0) {
+            std::printf("line %d\n", j);
         }
     }
 
     //https://www.alcf.anl.gov/sites/default/files/2020-01/OpenMP_Jose.pdf
     void render_CGH(std::complex<double> pixels[], const HittableList &world,
                     const std::vector<Point3> &point_cloud) const {
-
-#pragma omp parallel for firstprivate(point_cloud, world) shared(pixels) num_threads(16)
+#ifndef ENABLE_THREAD_POOL
+#pragma omp parallel for firstprivate(point_cloud, world) shared(pixels) num_threads(THREADS)
+#endif
         for (int j = 0; j < slm_height_in_px; ++j) {
             for (int i = 0; i < slm_width_in_px; ++i) {
                 auto slm_pixel_center = slm_pixel_00_location + (i * slm_pixel_delta_x) + (j * slm_pixel_delta_y);

@@ -1,3 +1,7 @@
+#define THREADS 4
+#define ENABLE_THREAD_POOL
+
+
 #include "Vec3.h"
 #include "Camera.h"
 #include "chrono"
@@ -23,7 +27,7 @@ int main(int argc, char *argv[]) {
     int image_width = 1920;
     int image_height = 1080;
     int samples_per_pixel = 1;
-    int num_threads = 1;
+    int num_threads = THREADS;
     if (argc != 1) {
         if (argc > 1) {
             samples_per_pixel = std::atoi(argv[1]);
@@ -51,10 +55,8 @@ int main(int argc, char *argv[]) {
     const HittableList *const_world = world;
 
 
-    BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
-
     std::cout << "Rendering a " << image_width << "x" << image_height << " hologram with " << camera.samples_per_pixel
-              << " samples per pixel with " << pool.get_thread_count() << " threads.\n";
+              << " samples per pixel with " << num_threads << " threads.\n";
 
     camera.print_properties();
 
@@ -62,12 +64,16 @@ int main(int argc, char *argv[]) {
 
     auto *pixels_complex = new std::complex<double>[image_width * image_height];
     auto point_cloud = camera.generate_point_cloud(&const_world);
-    camera.render_CGH(pixels_complex, *const_world, point_cloud);
 
-    // pool.detach_loop(0, image_height, [&](int j) {
-    //     camera.render_CGH_line(&pixels_complex[j * image_width], &world, point_cloud, j);
-    // }, 50);
-    // pool.wait();
+#ifndef ENABLE_THREAD_POOL
+    camera.render_CGH(pixels_complex, *const_world, point_cloud);
+#else
+    BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
+    pool.detach_loop(0, image_height, [&](int j) {
+        camera.render_CGH_line(&pixels_complex[j * image_width], *const_world, point_cloud, j);
+    }, num_threads*2);
+    pool.wait();
+#endif
 
     // std::arg -> If no errors occur, this is the phase angle of z in the interval [−π; π].
     // [-pi, pi] -> [0, 2pi] -> [0, 1] -> [0, 255]
