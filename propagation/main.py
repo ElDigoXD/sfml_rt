@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from numpy.fft.helper import fftshift
 from numpy.fft import fft2, ifft2
+import sys
+
+image = "ph_1gpu_1638s.png"
+if len(sys.argv) > 1:
+    image = sys.argv[1]
 
 mm = 1e-3
 um = 1e-6
@@ -25,7 +30,7 @@ dy = pixelsize
 
 # Import CGH
 
-image = Image.open('../out/ph_16cpu_1613s.png')
+image = Image.open(f'../out/{image}')
 data_im = np.array(image)
 
 print("Imported image: ", data_im.shape, " pixels.")
@@ -35,7 +40,6 @@ data_norm = (data_im - 127.5) / 127.5
 
 # [-1, 1] --> [-pi, pi]
 data_phase = np.exp(1j * np.pi * data_norm)
-print("in 0 0:", data_phase[0, 0].real, data_phase[0, 0].imag)
 
 nx = int(data_phase.shape[1])
 ny = int(data_phase.shape[0])
@@ -55,15 +59,14 @@ def propagation_kernel(slm_z):
 
     mod_fxfy = fxx * fxx + fyy * fyy
     kernel = np.exp(1j * ((k * slm_z) * np.sqrt(1 - mod_fxfy)))
-    print("kernel 0 0:", kernel[0, 0])
     kernel = fftshift(kernel)
-    print("kernel 0 0:", kernel[0, 0])
 
     propagated = ifft2(fft2(data_phase) * kernel)
 
     return propagated
 
 
+plt.imsave('propagated_image_195.png', np.abs(propagation_kernel(-195 * mm)), cmap='gray')
 plt.imsave('propagated_image_200.png', np.abs(propagation_kernel(-200 * mm)), cmap='gray')
 plt.imsave('propagated_image_212.png', np.abs(propagation_kernel(-212 * mm)), cmap='gray')
 
@@ -94,7 +97,7 @@ for i, ax in enumerate(axes.flat):
         ax.set_title('z = {} mm'.format(zs[i]))
         width = data_im.shape[1]
         height = data_im.shape[0]
-        zoom_factor = 2
+        zoom_factor = 1
         x_center, y_center = width // 2, height // 2  # Center of the image
         zoom_width, zoom_height = width // zoom_factor, height // zoom_factor
         ax.set_xlim(x_center - zoom_width // 2, x_center + zoom_width // 2)

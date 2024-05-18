@@ -4,7 +4,21 @@
 #include "HittableList.h"
 #include "Hittable.h"
 #include <complex>
+#include <cmath>
 
+#ifndef SCREEN_HEIGHT_IN_PX
+#define SCREEN_HEIGHT_IN_PX 16
+#endif
+#ifndef THREADS
+#define THREADS 1
+#endif
+
+#ifdef __CUDA_ARCH__
+#include <thrust/complex.h>
+typedef thrust::complex<double> complex;
+#else
+typedef std::complex<double> complex;
+#endif
 
 class HoloCamera {
 
@@ -21,7 +35,7 @@ public:
 
     Point3 camera_center;
 
-private:
+
     // Holo stuff
     const double wavelength = 0.6328e-6;
     // Focal distance
@@ -52,7 +66,6 @@ private:
     Point3 slm_pixel_00_location;
 
 
-public:
     void *operator new(size_t size) {
         return malloc(size);
     }
@@ -129,13 +142,35 @@ public:
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
+    [[nodiscard]] __host__ __device__ Vec3 screen_pixel_sample_square(curandState *rand) const {
+        return (-0.5 + Random::_double(rand)) * screen_pixel_delta_x +
+               (-0.5 + Random::_double(rand)) * screen_pixel_delta_y;
+    }
+
+    [[nodiscard]] __host__ __device__ Vec3 slm_pixel_sample_square(curandState *rand) const {
+        return (-0.5 + Random::_double(rand)) * slm_pixel_delta_x +
+               (-0.5 + Random::_double(rand)) * slm_pixel_delta_y;
+    }
+
+    __host__ __device__ Ray get_random_ray_at_screen(int i, int j, curandState *rand) const {
+        auto pixel_center = screen_pixel_00_location + (i * screen_pixel_delta_x) + (j * screen_pixel_delta_y);
+        auto ray_origin = camera_center;
+
+        auto pixel_sample = pixel_center + screen_pixel_sample_square(rand);
+        return Ray(ray_origin, pixel_sample - ray_origin);
+    }
+
     [[nodiscard]] std::vector<Point3> generate_point_cloud(const HittableList &world) const {
         auto point_cloud = std::vector<Point3>();
         HitRecord record;
         Ray ray;
         for (int j = 0; j < screen_height_in_px; ++j) {
             for (int i = 0; i < screen_width_in_px; ++i) {
+#ifdef ENABLE_RANDOM_SCREEN_RAYS
+                ray = get_random_ray_at_screen(i, j, nullptr);
+#else
                 ray = get_ray_at_screen(i, j);
+#endif
                 if (!(world).hit(ray, Interval(0.0000001, infinity), record)) {
                     continue;
                 }
@@ -166,7 +201,7 @@ public:
     int shinyness = 1000;
 
     void render_CGH_line(
-            std::complex<double> pixels[], const HittableList &world, const std::vector<Point3> &point_cloud,
+            complex pixels[], const HittableList &world, const std::vector<Point3> &point_cloud,
             int j) const {
 
         for (int i = 0; i < slm_width_in_px; ++i) {
@@ -174,7 +209,7 @@ public:
 
             for (const auto &point: point_cloud) {
                 auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
-                const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
+                const complex cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
                 pixels[i] += cgh;
             }
             pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
@@ -186,7 +221,7 @@ public:
     }
 
     //https://www.alcf.anl.gov/sites/default/files/2020-01/OpenMP_Jose.pdf
-    void render_CGH(std::complex<double> pixels[], const HittableList &world,
+    void render_CGH(complex pixels[], const HittableList &world,
                     const std::vector<Point3> &point_cloud_off) const {
 
         auto point_cloud = generate_point_cloud(world);
@@ -199,7 +234,7 @@ public:
 
                 for (const auto &point: point_cloud) {
                     auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
-                    const std::complex<double> cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
+                    const complex cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
                     pixels[i + j * slm_width_in_px] += cgh;
                 }
                 pixels[i + j * slm_width_in_px] /= (slm_width_in_px * slm_height_in_px * 1.0);
@@ -211,7 +246,7 @@ public:
         }
     }
 
-    __host__ std::complex<double>
+    __host__ __device__ complex
     ray_wave_cgh(const Ray &ray, int depth, const HittableList &world, curandState *rand) const {
         HitRecord record;
         Color attenuation;
@@ -249,10 +284,13 @@ public:
             }
             cur_ray = scattered_ray;
         }
-
         auto sub_image = (illumination_color).clamp(0, 1);
         auto sub_phase = ((2 * M_PI / wavelength) * po_distance);
-        auto sub_phase_c = std::exp(static_cast<std::complex<double>>(1.0i * sub_phase));
+#ifdef __CUDA_ARCH__
+        auto sub_phase_c = thrust::exp(thrust::complex(0.0, 1.0 * sub_phase));
+#else
+        auto sub_phase_c = std::exp(static_cast<complex>(1.0i * sub_phase));
+#endif
         auto sub_cgh_ray = (sub_image.r * sub_phase_c);
         return sub_cgh_ray;
     }

@@ -49,6 +49,8 @@ int main(int argc, char *argv[]) {
 
 
     unsigned char pixels[image_width * image_height];
+    auto *pixels_complex = new std::complex<double>[image_width * image_height];
+
     auto camera = HoloCamera(image_width, image_height, samples_per_pixel, 10);
 
     HittableList *world;
@@ -64,7 +66,6 @@ int main(int argc, char *argv[]) {
 
     auto start = time(nullptr);
 
-    auto *pixels_complex = new std::complex<double>[image_width * image_height];
     auto point_cloud = camera.generate_point_cloud(*const_world);
 
 #ifndef ENABLE_THREAD_POOL
