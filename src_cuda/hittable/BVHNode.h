@@ -54,6 +54,16 @@ public:
         return hit_left || hit_right;
     }
 
+    __host__ __device__ bool hit(const Ray &ray) const override {
+        if (!bbox.hit(ray, Interval(0.000001, infinity)))
+            return false;
+
+        bool hit_left = left->hit(ray);
+        if (hit_left) return true;
+        bool hit_right = right->hit(ray);
+        return hit_right;
+    }
+
     static bool box_compare(const Hittable *a, const Hittable *b, int axis_index) {
         return a->bounding_box().index(axis_index).min_ < b->bounding_box().index(axis_index).min_;
     }

@@ -14,7 +14,7 @@
 
 #include "Vec3.h"
 #include "Camera.h"
-#include "Sphere.h"
+#include "hittable/Sphere.h"
 #include "Scene.h"
 
 

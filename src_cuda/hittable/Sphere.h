@@ -1,11 +1,11 @@
 #pragma once
 
 
-#include "Material.h"
+#include "../material/Material.h"
 #include "Hittable.h"
-#include "Vec3.h"
+#include "../Vec3.h"
 
-class Sphere: public Hittable {
+class Sphere : public Hittable {
 private:
     double radius;
 public:
@@ -15,7 +15,7 @@ public:
     __host__ __device__ Sphere() {};
 
     __host__ __device__ Sphere(Point3 _center, double _radius, Material *_material) : center(_center), radius(_radius),
-                                                                  material(_material) {
+                                                                                      material(_material) {
         auto radius_vec = Vec3(radius, radius, radius);
         bbox = AABB(center - radius_vec, center + radius_vec);
     }
@@ -50,5 +50,16 @@ public:
         record.material = material;
 
         return true;
+    }
+
+    __host__ __device__ bool hit(const Ray &ray) const override {
+        Vec3 oc = ray.origin() - center;
+        auto a = ray.direction().length_squared();
+        auto c = oc.length_squared() - radius * radius;
+        if (c <= 0) return true;
+        auto b = dot(oc, ray.direction());
+        if (b > 0) return false;
+        auto discriminant = b * b - a * c;
+        return discriminant > 0;
     }
 };

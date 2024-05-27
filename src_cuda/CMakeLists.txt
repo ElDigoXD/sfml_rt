@@ -6,20 +6,20 @@ add_executable(rt_gpu_exe
         main_rt_gpu.cu
         AABB.h
         Camera.h
-        Hittable.h
-        HittableList.h
+        hittable/Hittable.h
+        hittable/HittableList.h
         Interval.h
-        Material.h
+        material/Material.h
         Ray.h
-        Sphere.h
+        hittable/Sphere.h
         Vec3.h
         utils.h
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
-        Triangle.h
+        hittable/Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
-        BVHNode.h
+        hittable/BVHNode.h
         HoloCamera.h
         third-party/stb_image.h
 )
@@ -43,20 +43,20 @@ add_executable(cgh_cpu_exe
         main_cgh_cpu.cu
         AABB.h
         Camera.h
-        Hittable.h
-        HittableList.h
+        hittable/Hittable.h
+        hittable/HittableList.h
         Interval.h
-        Material.h
+        material/Material.h
         Ray.h
-        Sphere.h
+        hittable/Sphere.h
         Vec3.h
         utils.h
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
-        Triangle.h
+        hittable/Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
-        BVHNode.h
+        hittable/BVHNode.h
         HoloCamera.h
         third-party/stb_image.h
         third-party/stb_image.h
@@ -70,20 +70,20 @@ add_executable(cgh_gpu_exe
         main_cgh_gpu.cu
         AABB.h
         Camera.h
-        Hittable.h
-        HittableList.h
+        hittable/Hittable.h
+        hittable/HittableList.h
         Interval.h
-        Material.h
+        material/Material.h
         Ray.h
-        Sphere.h
+        hittable/Sphere.h
         Vec3.h
         utils.h
         third-party/BS_thread_pool.h
         third-party/stb_image_write.h
-        Triangle.h
+        hittable/Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
-        BVHNode.h
+        hittable/BVHNode.h
         HoloCamera.h
         third-party/stb_image.h
 )
@@ -99,20 +99,20 @@ add_executable(rt_gui_cpu_exe
         Vec3.h
         Ray.h
         Camera.h
-        Hittable.h
-        Sphere.h
+        hittable/Hittable.h
+        hittable/Sphere.h
         Interval.h
         utils.h
-        Material.h
+        material/Material.h
         third-party/BS_thread_pool.h
         AABB.h
         AABB.h
         Scene.h
-        HittableList.h
-        Triangle.h
+        hittable/HittableList.h
+        hittable/Triangle.h
         third-party/tiny_obj_loader.h
         obj.h
-        BVHNode.h
+        hittable/BVHNode.h
         HoloCamera.h
         third-party/stb_image.h
 )

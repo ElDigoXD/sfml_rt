@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Ray.h"
-#include "HittableList.h"
-#include "Hittable.h"
+#include "hittable/HittableList.h"
+#include "hittable/Hittable.h"
 #include <complex>
 #include <cmath>
 
@@ -268,7 +268,7 @@ public:
             if (!record.material->scatter(cur_ray, record, attenuation, scattered_ray, rand)) break;
             //sky_color = sky_color * attenuation;
 
-            if (has_point_light && !(world).hit2(light_ray) &&
+            if (has_point_light && !(world).hit(light_ray) &&
                 attenuation != Color{1, 1, 1} /* todo: Not dielectric */) {
                 if (dot(scattered_ray.direction(), record.normal) <= 0) break;
 

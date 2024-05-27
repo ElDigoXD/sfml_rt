@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Ray.h"
-#include "HittableList.h"
-#include "Hittable.h"
+#include "hittable/HittableList.h"
+#include "hittable/Hittable.h"
 #include <complex>
 
 class Camera {
@@ -230,13 +230,23 @@ public:
     __host__ __device__ Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) const {
         HitRecord record;
         Color attenuation;
+        Color total_point_light_attenuation = Colors::white();
         Color sky_color = Colors::blue_sky();
+        Color diffuse;
+        Color specular;
         Color illumination_color{0, 0, 0};
         Ray cur_ray = ray;
         int cur_depth = depth;
         Ray scattered_ray;
         bool has_point_light = light != Color{0, 0, 0};
 
+        // Si el rayo escapa en iluminación ambiental, devuelve el color del rayo atenuado (si aplica)
+        // Si el rayo escapa en iluminación puntual, devuelve negro. Si no, también devuelve negro.
+        //   Lo único que hace es decidir si continúa lanzando rayos a la fuente.
+        // Cada rebote debería aplicar la atenuación
+
+
+        // While the ray does not escape
         while ((*world)->hit(cur_ray, Interval(0.0000001, infinity), record)) {
             // Ray does not escape, so it's represented as black
             if (cur_depth-- <= 0) break;
@@ -244,24 +254,29 @@ public:
             auto light_ray = Ray(record.p, light - record.p);
 
             if (!record.material->scatter(cur_ray, record, attenuation, scattered_ray, rand)) return {0, 0, 0};
-            sky_color = sky_color * attenuation;
+            sky_color *= attenuation;
+            total_point_light_attenuation *= attenuation;
 
+            if (cur_depth == max_depth) {}
 
-            if (has_point_light && !(*world)->hit2(light_ray) && attenuation != Color{1, 1, 1} /* Not dielectric */) {
-                if (dot(scattered_ray.direction(), record.normal) <= 0) break;
+            if (has_point_light) {
+                if (!(*world)->hit(light_ray) && !(attenuation == Color{1, 1, 1})) { // Not in shadow
+                    if (dot(scattered_ray.direction(), record.normal) <= 0) break; // Ray absorbed
 
-                auto diffuse = attenuation * light_color * dot(light_ray.direction().normalize(), record.normal);
+                    if (record.material->is_diffuse()) {
+                        diffuse += total_point_light_attenuation * light_color * dot(light_ray.direction().normalize(), record.normal);
+                    }
 
-                auto h = ((camera_center - record.p).normalize() + (light - record.p).normalize()).normalize();
-                auto specular = light_color * pow(dot(h, record.normal), shinyness / 4);
+                    auto h = ((camera_center - record.p).normalize() + (light - record.p).normalize()).normalize();
+                    specular = light_color * pow(dot(h, record.normal), shinyness / 4);
+                } else {
 
-                illumination_color += (diffuse * diffuse_intensity + specular * specular_intensity);
-
+                }
             }
             cur_ray = scattered_ray;
         }
 
-        return (sky_color * sky_intensity + illumination_color).clamp(0, 1);
+        return (sky_color * sky_intensity + diffuse * diffuse_intensity + specular * specular_intensity).clamp(0, 1);
     }
 
     void set_focus_dist(double dist) {

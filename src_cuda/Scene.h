@@ -1,11 +1,11 @@
 #pragma once
 
 #include <cuda.h>
-#include "Sphere.h"
+#include "hittable/Sphere.h"
 #include "utils.h"
-#include "Triangle.h"
+#include "hittable/Triangle.h"
 #include "obj.h"
-#include "BVHNode.h"
+#include "hittable/BVHNode.h"
 #include "HoloCamera.h"
 
 #define create_scene(name, length)                                                                                                                               \
@@ -305,14 +305,17 @@ namespace CPUScene {
         d_camera.look_at = d_camera.look_from - unit_vector(d_camera.look_from) * 10;
         d_camera.defocus_angle = 0.6;
         d_camera.update();
-
+        d_camera.light = {0, 3, 0};
+        d_camera.light_color = {1, 1, 1};
+        d_camera.diffuse_intensity = 1;
+        d_camera.sky_intensity = 1;
         return new HittableList(d_list, 22 * 22 + 1 + 3);
     }
 
     HittableList *point_light(Camera &d_camera) {
         auto d_list = new Hittable *[5];
 
-        d_list[0] = new Sphere(Vec3(0, 1, -1), 0.5, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[0] = new Sphere(Vec3(0, 1, -1), 0.5, new Lambertian(Colors::red()));
         d_list[1] = new Sphere(Vec3(0, -99.5, -1), 100, new Lambertian(Vec3(0.8, 0.8, 0.0)));
         d_list[2] = new Sphere(Vec3(1, 1, -1), 0.5, new Dielectric(1.5));
         d_list[3] = new Sphere(Vec3(1, 1, -3), 0.5, new Lambertian(Vec3(0.7, 0.3, 0.3)));
@@ -360,7 +363,8 @@ namespace CPUScene {
         auto d_list_length = Obj::get_vertices(&vertices, false);
         auto d_list = new Hittable *[d_list_length];
 
-        auto *mat = new Lambertian({0.2, 0.5, 0.8});
+        // auto *mat = new Lambertian({0.2, 0.5, 0.8});
+        auto *mat = new Metal({0.2, 0.5, 0.8}, 1);
         for (int i = 0; i < d_list_length / 3; i++) {
             d_list[i] = new Triangle(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2], mat);
         }

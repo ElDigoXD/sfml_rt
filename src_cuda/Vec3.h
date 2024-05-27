@@ -46,6 +46,13 @@ public:
         return *this;
     }
 
+    __host__ __device__ Vec3 &operator*=(Vec3 b) {
+        x *= b.x;
+        y *= b.y;
+        z *= b.z;
+        return *this;
+    }
+
     __host__ __device__ Vec3 &operator/=(double t) {
         return *this *= 1 / t;
     }

@@ -10,16 +10,13 @@
 #include "third-party/tiny_obj_loader.h"
 #include <SFML/Graphics.hpp>
 #include <thread>
-#include <type_traits>
 
+#include "Camera.h"
 #include "utils.h"
 #include "Vec3.h"
-#include "Camera.h"
-#include "Material.h"
+#include "material/Material.h"
 #include "Scene.h"
-#include "Triangle.h"
-#include "obj.h"
-#include "BVHNode.h"
+#include "hittable/Triangle.h"
 
 class GUI {
 public:
@@ -98,7 +95,7 @@ public:
         //camera.light = {0, 10, 10};
         //camera.light_color = {1, 1, 1};
 
-        world = CPUScene::hologram(camera);
+        world = CPUScene::point_light(camera);
     }
 
     void run() {

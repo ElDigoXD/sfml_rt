@@ -1,4 +1,4 @@
-#define SCREEN_HEIGHT_IN_PX 540
+#define SCREEN_HEIGHT_IN_PX 100
 #define ENABLE_RANDOM_SCREEN_RAYS
 //#define ENABLE_RANDOM_SLM_RAYS
 
@@ -19,7 +19,7 @@
 
 #include "Vec3.h"
 #include "Camera.h"
-#include "Sphere.h"
+#include "hittable/Sphere.h"
 #include "Scene.h"
 
 __global__ void

@@ -1,4 +1,5 @@
 cmake-build-*/*
 out/*
+out_old/*
 build/*
 release/*

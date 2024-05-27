@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Hittable.h"
-#include "Material.h"
+#include "../material/Material.h"
 
 class HittableList : public Hittable {
 public:
@@ -33,11 +33,9 @@ public:
         return hit;
     }
 
-    [[nodiscard]] __host__ __device__ bool hit2(const Ray &ray) const {
-        const Interval interval(0.0000001, infinity);
-        HitRecord record;
+    [[nodiscard]] __host__ __device__ bool hit(const Ray &ray) const override {
         for (int i = 0; i < list_size; i++) {
-            if (list[i]->hit(ray, interval, record)) {
+            if (list[i]->hit(ray)) {
                 return true;
             }
         }
