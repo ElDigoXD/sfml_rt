@@ -257,21 +257,19 @@ public:
             sky_color *= attenuation;
             total_point_light_attenuation *= attenuation;
 
-            if (cur_depth == max_depth) {}
+            if (has_point_light
+                && !(*world)->hit(light_ray)
+                && attenuation != Color{1, 1, 1}) { // Not in shadow
 
-            if (has_point_light) {
-                if (!(*world)->hit(light_ray) && !(attenuation == Color{1, 1, 1})) { // Not in shadow
-                    if (dot(scattered_ray.direction(), record.normal) <= 0) break; // Ray absorbed
+                if (dot(scattered_ray.direction(), record.normal) <= 0) break; // Ray absorbed
 
-                    if (record.material->is_diffuse()) {
-                        diffuse += total_point_light_attenuation * light_color * dot(light_ray.direction().normalize(), record.normal);
-                    }
-
-                    auto h = ((camera_center - record.p).normalize() + (light - record.p).normalize()).normalize();
-                    specular = light_color * pow(dot(h, record.normal), shinyness / 4);
-                } else {
-
+                if (record.material->is_diffuse()) {
+                    diffuse += total_point_light_attenuation * light_color *
+                               dot(light_ray.direction().normalize(), record.normal);
                 }
+
+                auto h = ((camera_center - record.p).normalize() + (light - record.p).normalize()).normalize();
+                specular += light_color * pow(dot(h, record.normal), shinyness / 4);
             }
             cur_ray = scattered_ray;
         }

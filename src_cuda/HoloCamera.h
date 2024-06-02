@@ -246,7 +246,10 @@ public:
                              curandState *rand) const {
         HitRecord record;
         Color attenuation;
-        Color sky_color = Colors::blue_sky();
+        Color total_point_light_attenuation = Colors::white();
+        //Color sky_color = Colors::blue_sky();
+        Color diffuse;
+        Color specular;
         Color illumination_color{0, 0, 0};
         Ray cur_ray = ray;
         int cur_depth = depth;
@@ -255,32 +258,39 @@ public:
         auto po_distance = 0.0;
 
 
-        while ((world).hit(cur_ray, Interval(0.0000001, infinity), record)) {
+        while (world.hit(cur_ray, Interval(0.0000001, infinity), record)) {
             // Ray does not escape, so it's represented as black
+            if (cur_depth == max_depth && !(record.p - expected_point).is_near_zero()) {
+                return 0;
+            }
             if (cur_depth-- <= 0) break;
 
             auto light_ray = Ray(record.p, light - record.p);
 
             if (!record.material->scatter(cur_ray, record, attenuation, scattered_ray, rand)) break;
-            //sky_color = sky_color * attenuation;
+            //sky_color *= attenuation;
+            total_point_light_attenuation *= attenuation;
 
-            if (has_point_light && !(world).hit(light_ray) &&
-                attenuation != Color{1, 1, 1} /* todo: Not dielectric */) {
+            if (has_point_light
+                && !(world).hit(light_ray)
+                && attenuation != Color{1, 1, 1} /* Not dielectric */) {
+
                 if (dot(scattered_ray.direction(), record.normal) <= 0) break;
 
                 auto intersection_to_light_distance = (light - record.p).length();
                 po_distance = (ray.origin() - record.p).length() + intersection_to_light_distance;
 
-                auto diffuse = attenuation * light_color * dot(light_ray.direction().normalize(), record.normal);
+                if (record.material->is_diffuse()) {
+                    diffuse += total_point_light_attenuation * light_color *
+                               dot(light_ray.direction().normalize(), record.normal);
+                }
 
-                // auto h = ((camera_center - record.p).normalize() + (light - record.p).normalize()).normalize();
-                // auto specular = light_color * pow(dot(h, record.normal), shinyness / 4);
-
-                illumination_color += (diffuse * diffuse_intensity);
+                auto h = ((camera_center - record.p).normalize() + (light - record.p).normalize()).normalize();
+                specular += light_color * pow(dot(h, record.normal), shinyness / 4);
             }
             cur_ray = scattered_ray;
         }
-        auto sub_image = (illumination_color).clamp(0, 1);
+        auto sub_image = (diffuse * diffuse_intensity + specular * specular_intensity).clamp(0, 1);
         auto sub_phase = ((2 * M_PI / wavelength) * po_distance);
 #ifdef CUDA
         Complex sub_phase_c = thrust::exp(thrust::complex(0.0, 1.0 * sub_phase));
