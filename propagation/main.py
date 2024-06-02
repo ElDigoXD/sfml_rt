@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 from PIL import Image
 from numpy.fft.helper import fftshift
 from numpy.fft import fft2, ifft2
@@ -13,17 +15,14 @@ mm = 1e-3
 um = 1e-6
 nm = 1e-9
 
-slm_z = -1000 * mm
 pixelsize = 8 * um
 wl = 632.8 * nm
 k = 2 * np.pi / wl
 
 # z_srt = input('Propagation distance, z (mm): ')
 
-# focal?
-
-lx = 15.36 * mm
-ly = 8.64 * mm
+# lx = 15.36 * mm
+# ly = 8.64 * mm
 
 dx = pixelsize
 dy = pixelsize
