@@ -58,11 +58,11 @@ public:
         return ptr;
     }
 
-    __host__ __device__ Camera() : Camera(600, 400) {}
+    GPU Camera() : Camera(600, 400) {}
 
-    __host__ __device__ Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 10) {}
+    GPU Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 10) {}
 
-    __host__ __device__ Camera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
+    GPU Camera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
             : image_width(_image_width),
               image_height(_image_height),
               samples_per_pixel(_samples_per_pixel),
@@ -70,9 +70,9 @@ public:
         update();
     }
 
-    __host__ __device__ void update() { update(image_width, image_height); }
+    GPU void update() { update(image_width, image_height); }
 
-    __host__ __device__ void update(int width, int height) {
+    GPU void update(int width, int height) {
         image_width = width;
         image_height = height;
 
@@ -107,7 +107,7 @@ public:
         defocus_disk_y = v * defocus_radius;
     }
 
-    __host__ __device__ Ray get_random_ray_at(int i, int j, curandState *rand) const {
+    GPU Ray get_random_ray_at(int i, int j, curandState *rand) const {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto pixel_sample = pixel_center + pixel_sample_square(rand);
 
@@ -129,14 +129,14 @@ public:
         return Ray(ray_origin, pixel_sample - ray_origin);
     }
 */
-    [[nodiscard]] __host__ __device__ Ray get_ray_at(int i, int j) const {
+    [[nodiscard]] GPU Ray get_ray_at(int i, int j) const {
         auto pixel_center = pixel_00_location + (i * pixel_delta_x) + (j * pixel_delta_y);
         auto ray_origin = camera_center;
 
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
-    [[nodiscard]] __host__ __device__ Vec3 pixel_sample_square(curandState *rand) const {
+    [[nodiscard]] GPU Vec3 pixel_sample_square(curandState *rand) const {
         return (-0.5 + Random::_double(rand)) * pixel_delta_x +
                (-0.5 + Random::_double(rand)) * pixel_delta_y;
     }
@@ -146,7 +146,7 @@ public:
                (-0.5 + Random::_double()) * subpixel_delta_y;
     }
 
-    [[nodiscard]] __host__ __device__ Point3 defocus_disk_sample(curandState *rand) const {
+    [[nodiscard]] GPU Point3 defocus_disk_sample(curandState *rand) const {
         auto p = random_in_unit_disk(rand);
         return camera_center + p.x * defocus_disk_x + p.y * defocus_disk_y;
     }
@@ -189,7 +189,7 @@ public:
         }
     }
 
-    __host__ __device__ static Color lerp(Color start, Color end, double a) {
+    GPU static Color lerp(Color start, Color end, double a) {
         return (1 - a) * start + a * end;
     }
 
@@ -227,7 +227,7 @@ public:
     };
     int shinyness = 1000;
 
-    __host__ __device__ Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) const {
+    GPU Color ray_color(const Ray &ray, int depth, HittableList **world, curandState *rand) const {
         HitRecord record;
         Color attenuation;
         Color total_point_light_attenuation = Colors::white();

@@ -11,7 +11,7 @@ public:
     double t{};
     bool front_face{};
 
-    __host__ __device__ void set_face_normal(const Ray &ray, const Vec3 &outward_normal) {
+    GPU void set_face_normal(const Ray &ray, const Vec3 &outward_normal) {
         front_face = dot(ray.direction(), outward_normal) < 0;
         normal = front_face ? outward_normal : -outward_normal;
     }
@@ -22,11 +22,11 @@ class Material {
 public:
     virtual ~Material() = default;
 
-    __host__ __device__ virtual bool
+    GPU virtual bool
     scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
             curandState *rand) const = 0;
 
-    __host__ __device__ virtual bool is_diffuse() const { return false; }
+    GPU virtual bool is_diffuse() const { return false; }
 };
 
 
@@ -34,10 +34,10 @@ class Lambertian : public Material {
 public:
     Color albedo;
 
-    __host__ __device__ explicit Lambertian(const Color &_albedo) : albedo(_albedo) {}
+    GPU explicit Lambertian(const Color &_albedo) : albedo(_albedo) {}
 
-    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
-                                     curandState *rand) const override {
+    GPU bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+                     curandState *rand) const override {
         auto scatter_direction = record.normal + random_unit_vector(rand);
         if (scatter_direction.is_near_zero())
             scatter_direction = record.normal;
@@ -47,7 +47,7 @@ public:
         return true;
     }
 
-    __host__ __device__ bool is_diffuse() const override { return true; }
+    GPU bool is_diffuse() const override { return true; }
 };
 
 class Metal : public Material {
@@ -55,10 +55,10 @@ public:
     Color albedo;
     double fuzz;
 
-    __host__ __device__ Metal(const Color &_albedo, double _fuzz) : albedo(_albedo), fuzz(_fuzz < 1 ? _fuzz : 1) {}
+    GPU Metal(const Color &_albedo, double _fuzz) : albedo(_albedo), fuzz(_fuzz < 1 ? _fuzz : 1) {}
 
-    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
-                                     curandState *rand) const override {
+    GPU bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+                     curandState *rand) const override {
         auto reflect_direction = reflect(ray_in.direction().normalize(), record.normal);
 
         scattered_ray = Ray(record.p, reflect_direction + fuzz * random_unit_vector(rand));
@@ -71,10 +71,10 @@ class Dielectric : public Material {
 public:
     double refraction_index;
 
-    __host__ __device__ explicit Dielectric(double _refraction_index) : refraction_index(_refraction_index) {}
+    GPU explicit Dielectric(double _refraction_index) : refraction_index(_refraction_index) {}
 
-    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
-                                     curandState *rand) const override {
+    GPU bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+                     curandState *rand) const override {
 
         attenuation = Colors::white();
         double refraction_ratio = record.front_face ? (1.0 / refraction_index) : refraction_index;
@@ -96,7 +96,7 @@ public:
     }
 
 private:
-    __host__ __device__ static double reflectance(double cosine, double _refraction_index) {
+    GPU static double reflectance(double cosine, double _refraction_index) {
         // Schlick's approximation
 
         auto r0 = (1 - _refraction_index) / (1 + _refraction_index);
@@ -107,10 +107,10 @@ private:
 
 class Normals : public Material {
 public:
-    __host__ __device__ Normals() {};
+    GPU Normals() {};
 
-    __host__ __device__ bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
-                                     curandState *rand) const override {
+    GPU bool scatter(const Ray &ray_in, const HitRecord &record, Color &attenuation, Ray &scattered_ray,
+                     curandState *rand) const override {
         auto scatter_direction = record.normal + random_unit_vector(rand);
         if (scatter_direction.is_near_zero())
             scatter_direction = record.normal;

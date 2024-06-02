@@ -1,20 +1,23 @@
 #pragma once
 
+
+#ifdef CUDA
 #include "thrust/host_vector.h"
 #include "thrust/universal_vector.h"
 #include "thrust/device_vector.h"
 #include "thrust/sort.h"
+#endif
 
 class BVHNode : public Hittable {
 public:
     Hittable *left;
     Hittable *right;
 
-    __host__ __device__ BVHNode(Hittable **list, int list_size, curandState *rand) :
+    GPU BVHNode(Hittable **list, int list_size, curandState *rand) :
             BVHNode(list, 0,
                     list_size, rand) {}
 
-    __host__ __device__ BVHNode(Hittable **list, int start, int end, curandState *rand) {
+    GPU BVHNode(Hittable **list, int start, int end, curandState *rand) {
         auto objects = list;
 
         auto axis = Random::_double(rand);
@@ -44,7 +47,7 @@ public:
         bbox = AABB(left->bounding_box(), right->bounding_box());
     }
 
-    __host__ __device__ bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
+    GPU bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
         if (!bbox.hit(ray, interval))
             return false;
 
@@ -54,7 +57,7 @@ public:
         return hit_left || hit_right;
     }
 
-    __host__ __device__ bool hit(const Ray &ray) const override {
+    GPU bool hit(const Ray &ray) const override {
         if (!bbox.hit(ray, Interval(0.000001, infinity)))
             return false;
 
@@ -75,7 +78,7 @@ public:
     static bool box_z_compare(const Hittable *a, const Hittable *b) { return box_compare(a, b, 2); }
 
 
-    __host__ __device__ void dev_sort(Hittable **a, Hittable **b,
+    GPU void dev_sort(Hittable **a, Hittable **b,
                                       bool (*comparator)(Hittable *a, Hittable *b)) {
         for (int i = 0; a + i < b; i++) {
             for (int j = 0; a + j < b; j++) {

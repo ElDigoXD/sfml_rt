@@ -33,6 +33,7 @@ add_executable(test_exe
         test.cpp
         third-party/stb_image_write.h
         third-party/stb_image.h
+        third-party/argparse.hpp
 )
 
 set_target_properties(test_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
@@ -40,7 +41,7 @@ target_compile_definitions(test_exe PRIVATE PROFILE)
 
 # cgh_cpu_exe
 add_executable(cgh_cpu_exe
-        main_cgh_cpu.cu
+        main_cgh_cpu.cpp
         AABB.h
         Camera.h
         hittable/Hittable.h
@@ -65,27 +66,27 @@ add_executable(cgh_cpu_exe
 set_target_properties(cgh_cpu_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
 target_compile_definitions(cgh_cpu_exe PRIVATE PROFILE)
 
-# cgh_cpu_exe
+# cgh_gpu_exe
 add_executable(cgh_gpu_exe
         main_cgh_gpu.cu
         AABB.h
         Camera.h
+        HoloCamera.h
+        Interval.h
+        Ray.h
+        Vec3.h
+        hittable/BVHNode.h
         hittable/Hittable.h
         hittable/HittableList.h
-        Interval.h
-        material/Material.h
-        Ray.h
         hittable/Sphere.h
-        Vec3.h
-        utils.h
-        third-party/BS_thread_pool.h
-        third-party/stb_image_write.h
         hittable/Triangle.h
-        third-party/tiny_obj_loader.h
+        material/Material.h
         obj.h
-        hittable/BVHNode.h
-        HoloCamera.h
+        third-party/BS_thread_pool.h
         third-party/stb_image.h
+        third-party/stb_image_write.h
+        third-party/tiny_obj_loader.h
+        utils.h
 )
 
 set_target_properties(cgh_gpu_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out/)
@@ -95,7 +96,7 @@ target_compile_definitions(cgh_gpu_exe PRIVATE PROFILE)
 
 # rt_gui_cpu_exe
 add_executable(rt_gui_cpu_exe
-        main_rt_gui_cpu.cu
+        main_rt_gui_cpu.cpp
         Vec3.h
         Ray.h
         Camera.h

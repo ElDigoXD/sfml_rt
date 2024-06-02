@@ -1,6 +1,5 @@
-#define SCREEN_HEIGHT_IN_PX 100
+#define SCREEN_HEIGHT_IN_PX 50
 #define ENABLE_RANDOM_SCREEN_RAYS
-//#define ENABLE_RANDOM_SLM_RAYS
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
@@ -11,6 +10,8 @@
 #include "third-party/tiny_obj_loader.h"
 
 #include "third-party/BS_thread_pool.h"
+
+#include "utils.h"
 #include "cuda.h"
 #include <chrono>
 #include <cfloat>
@@ -21,6 +22,7 @@
 #include "Camera.h"
 #include "hittable/Sphere.h"
 #include "Scene.h"
+#include "third-party/argparse.hpp"
 
 __global__ void
 render(thrust::complex<double> *fb, int max_x, int max_y, HoloCamera *d_camera, HittableList **d_world,
@@ -38,13 +40,9 @@ render(thrust::complex<double> *fb, int max_x, int max_y, HoloCamera *d_camera, 
             d_camera->slm_pixel_00_location + (i * d_camera->slm_pixel_delta_x) + (j * d_camera->slm_pixel_delta_y);
 
     for (int pi = 0; pi < point_cloud_size; pi++) {
-#ifdef ENABLE_RANDOM_SLM_RAYS
-        auto pixel_sample = slm_pixel_center + d_camera->slm_pixel_sample_square(&local_state);
-        auto ray = Ray(pixel_sample, point_cloud[pi] - pixel_sample);
-#else
         auto ray = Ray(slm_pixel_center, point_cloud[pi] - slm_pixel_center);
-#endif
-        const thrust::complex<double> cgh = d_camera->ray_wave_cgh(ray, d_camera->max_depth, *world, &local_state);
+        const thrust::complex<double> cgh = d_camera->ray_wave_cgh(ray, point_cloud[pi], d_camera->max_depth, *world,
+                                                                   &local_state);
         fb[pixel_index] += cgh;
     }
     fb[pixel_index] /= (d_camera->slm_width_in_px * d_camera->slm_height_in_px * 1.0);
@@ -65,25 +63,32 @@ __global__ void rand_init(curandState *rand_state) {
     }
 }
 
-int main(int argc, char *argv[]) {
-    int image_width = 1920;
-    int image_height = 1080;
-    int samples_per_pixel = 1;
-    int tx = 8, ty = 8;
-    if (argc != 1) {
-        if (argc > 1) {
-            samples_per_pixel = std::atoi(argv[1]);
-        }
-        if (argc > 2) {
-            tx = std::atoi(argv[2]);
-            ty = std::atoi(argv[2]);
-        }
-        if (argc > 3) {
-            image_width = std::atoi(argv[3]) * 16 / 9;
-            image_height = std::atoi(argv[3]);
-        }
-    }
+struct MyArgs : public argparse::Args {
+    int &image_height = kwarg("ih,image-height", "Image height in pixels").set_default(1080);
+    int &screen_height = kwarg("sh,screen-height", "Screen height in pixels (for the point cloud)").set_default(SCREEN_HEIGHT_IN_PX);
+    int &samples_per_pixel = kwarg("spp,samples", "Number of samples per pixel (unimplemented)").set_default(1);
+    int &max_depth = kwarg("d,depth", "Maximum ray depth").set_default(10);
+    int &tx = kwarg("tx", "Number of blocks in the x dimension").set_default(32);
+    int &ty = kwarg("ty", "Number of blocks in the y dimension").set_default(16);
+    bool &verbose = flag("v,verbose", "A flag to toggle verbose");
+};
 
+int main(int argc, char *argv[]) {
+    auto args = argparse::parse<MyArgs>(argc, argv);
+
+    const int image_width = args.image_height * 16 / 9;
+    const int image_height = args.image_height;
+    const int screen_height = args.screen_height;
+
+    const int samples_per_pixel = args.samples_per_pixel;
+    const int max_depth = args.max_depth;
+
+    const int tx = args.tx;
+    const int ty = args.ty;
+
+    if (args.verbose) {
+        args.print();
+    }
 
     unsigned char pixels[image_width * image_height];
 
@@ -92,8 +97,8 @@ int main(int argc, char *argv[]) {
     auto num_pixels = image_width * image_height;
     auto frame_buffer_size = num_pixels * sizeof(thrust::complex<double>);
 
-    dim3 blocks(image_width / tx + 1, image_height / ty + 1);
-    dim3 threads(tx, ty);
+    dim3 block(tx, ty);
+    dim3 grid((image_width + block.x - 1) / block.x, (image_height + block.y - 1) / block.y);
 
 
     thrust::complex<double> *fb;
@@ -108,7 +113,7 @@ int main(int argc, char *argv[]) {
     HittableList **d_world;
     HoloCamera *d_camera;
 
-    d_camera = new(true) HoloCamera(image_width, image_height, samples_per_pixel, 10);
+    d_camera = new(true) HoloCamera(image_width, image_height, samples_per_pixel, max_depth, screen_height);
 
     Scene::hologram(&d_list, &d_world, *d_camera, d_global_state2);
     const HittableList *h_world = Scene::hologram_cpu(*d_camera);
@@ -126,16 +131,16 @@ int main(int argc, char *argv[]) {
     CU(cudaMallocManaged((void **) &fb, frame_buffer_size));
     CU(cudaMalloc((void **) &d_global_state, num_pixels * sizeof(curandState)));
 
-    render_init<<<blocks, threads>>>(image_width, image_height, d_global_state);
+    render_init<<<grid, block>>>(image_width, image_height, d_global_state);
     CU(cudaGetLastError());
     CU(cudaDeviceSynchronize());
 
-    render<<<blocks, threads>>>(fb, image_width, image_height,
-                                d_camera,
-                                d_world,
-                                d_point_cloud,
-                                point_cloud.size(),
-                                d_global_state);
+    render<<<grid, block>>>(fb, image_width, image_height,
+                            d_camera,
+                            d_world,
+                            d_point_cloud,
+                            point_cloud.size(),
+                            d_global_state);
     CU(cudaGetLastError());
     CU(cudaDeviceSynchronize());
 
@@ -161,7 +166,6 @@ int main(int argc, char *argv[]) {
     std::cerr << "Rendered in " << duration << "s" << std::endl;
     printf("Image saved as: %s\n", filename.c_str());
 
-
-// clean up
-// CU(cudaDeviceSynchronize());
+    auto command = string_format("python3 ../propagation/main.py %s", filename.c_str());
+    std::system(command.c_str());
 }

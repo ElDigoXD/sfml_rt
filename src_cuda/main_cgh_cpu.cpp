@@ -1,8 +1,7 @@
-#define THREADS 12
-#define ENABLE_THREAD_POOL
-#define SCREEN_HEIGHT_IN_PX 16
-#undef ENABLE_THREAD_POOL
-
+#define THREADS 6
+//#define ENABLE_THREAD_POOL
+#define SCREEN_HEIGHT_IN_PX 10
+#define ENABLE_RANDOM_SCREEN_RAYS
 
 #include "Vec3.h"
 #include "Camera.h"
@@ -49,12 +48,12 @@ int main(int argc, char *argv[]) {
 
 
     unsigned char pixels[image_width * image_height];
-    auto *pixels_complex = new std::complex<double>[image_width * image_height];
+    auto *pixels_complex = new Complex[image_width * image_height];
 
-    auto camera = HoloCamera(image_width, image_height, samples_per_pixel, 10);
+    auto camera = HoloCamera(image_width, image_height, samples_per_pixel, 10, SCREEN_HEIGHT_IN_PX);
 
     HittableList *world;
-    world = CPUScene::hologram(camera);
+    world = CPUScene::hologram_cpu(camera);
 
     const HittableList *const_world = world;
 
@@ -81,7 +80,7 @@ int main(int argc, char *argv[]) {
     // std::arg -> If no errors occur, this is the phase angle of z in the interval [−π; π].
     // [-pi, pi] -> [0, 2pi] -> [0, 1] -> [0, 255]
     for (int i = 0; i < image_width * image_height; i++) {
-        pixels[i] = static_cast<unsigned char>((std::arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255);
+        pixels[i] = static_cast<unsigned char>((arg(pixels_complex[i]) + M_PI) / (2 * M_PI) * 255);
     }
 
     auto end = time(nullptr);
@@ -99,20 +98,22 @@ int main(int argc, char *argv[]) {
     stbi_write_png(filename.c_str(), image_width, image_height, 1, pixels, 0);
     std::cerr << "Rendered in " << duration << "s" << std::endl;
 
+    printf("Image saved as: %s\n", filename.c_str());
+
     if (ENABLE_AMPLITUDE) {
 
-        auto min = std::abs(
+        auto min = abs(
                 *std::min_element(pixels_complex, pixels_complex + image_width * image_height, [](auto a, auto b) {
-                    return std::abs(a) < std::abs(b);
+                    return abs(a) < abs(b);
                 }));
 
-        auto max = std::abs(
+        auto max = abs(
                 *std::max_element(pixels_complex, pixels_complex + image_width * image_height, [](auto a, auto b) {
-                    return std::abs(a) < std::abs(b);
+                    return abs(a) < abs(b);
                 }));
 
         for (int i = 0; i < image_width * image_height; i++) {
-            pixels[i] = static_cast<unsigned char>((std::abs(pixels_complex[i]) - min) / (max - min) * 255);
+            pixels[i] = static_cast<unsigned char>((abs(pixels_complex[i]) - min) / (max - min) * 255);
         }
 
         stbi_write_png(string_format("amp_%dx%d_%d_%d_%dcpu_%.1ld.png", image_height, image_width,

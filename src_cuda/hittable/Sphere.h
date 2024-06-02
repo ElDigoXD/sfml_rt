@@ -12,15 +12,15 @@ public:
     Material *material;
     Point3 center;
 
-    __host__ __device__ Sphere() {};
+    GPU Sphere() {};
 
-    __host__ __device__ Sphere(Point3 _center, double _radius, Material *_material) : center(_center), radius(_radius),
+    GPU Sphere(Point3 _center, double _radius, Material *_material) : center(_center), radius(_radius),
                                                                                       material(_material) {
         auto radius_vec = Vec3(radius, radius, radius);
         bbox = AABB(center - radius_vec, center + radius_vec);
     }
 
-    __host__ __device__ bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
+    GPU bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
         //if (!bbox.hit(ray, interval)) return false;
         Vec3 oc = ray.origin() - center;
         auto a = ray.direction().length_squared();
@@ -52,7 +52,7 @@ public:
         return true;
     }
 
-    __host__ __device__ bool hit(const Ray &ray) const override {
+    GPU bool hit(const Ray &ray) const override {
         Vec3 oc = ray.origin() - center;
         auto a = ray.direction().length_squared();
         auto c = oc.length_squared() - radius * radius;

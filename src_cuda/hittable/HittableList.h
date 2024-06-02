@@ -8,9 +8,9 @@ public:
     int list_size;
     Hittable **list;
 
-    //__host__ __device__ HittableList() {};
+    //GPU HittableList() {};
 
-    __host__ __device__ explicit HittableList(Hittable **l, int n) : list(l), list_size(n) {
+    GPU explicit HittableList(Hittable **l, int n) : list(l), list_size(n) {
         if (list_size == 0) return;
         bbox = list[0]->bounding_box();
         for (int i = 0; i < list_size; i++) {
@@ -18,7 +18,7 @@ public:
         }
     }
 
-    __host__ __device__ bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
+    GPU bool hit(const Ray &ray, const Interval &interval, HitRecord &record) const override {
         HitRecord temp_record;
         bool hit = false;
         auto in = Interval(interval);
@@ -33,7 +33,7 @@ public:
         return hit;
     }
 
-    [[nodiscard]] __host__ __device__ bool hit(const Ray &ray) const override {
+    [[nodiscard]] GPU bool hit(const Ray &ray) const override {
         for (int i = 0; i < list_size; i++) {
             if (list[i]->hit(ray)) {
                 return true;

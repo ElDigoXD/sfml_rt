@@ -9,15 +9,15 @@ private:
     Vec3 dir;
 
 public:
-    __host__ __device__ Ray() {};
+    GPU Ray() {};
 
-    __host__ __device__ Ray(const Point3 &origin, const Vec3 &direction) : orig(origin), dir(direction) {}
+    GPU Ray(const Point3 &origin, const Vec3 &direction) : orig(origin), dir(direction) {}
 
-    [[nodiscard]] __host__ __device__ Point3 origin() const { return orig; }
+    [[nodiscard]] GPU Point3 origin() const { return orig; }
 
-    [[nodiscard]] __host__ __device__ Vec3 direction() const { return dir; }
+    [[nodiscard]] GPU Vec3 direction() const { return dir; }
 
-    [[nodiscard]] __host__ __device__ Point3 at(double t) const {
+    [[nodiscard]] GPU Point3 at(double t) const {
         return orig + t * dir;
 
     }

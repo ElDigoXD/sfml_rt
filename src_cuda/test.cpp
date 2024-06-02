@@ -13,6 +13,7 @@
 #include <iostream>
 #include "vector"
 #include "algorithm"
+#include "third-party/argparse.hpp"
 
 // https://stackoverflow.com/questions/5915125/fftshift-ifftshift-c-c-source-code
 static inline
@@ -149,7 +150,20 @@ void angular_spectrum_kernel(fftw_complex *in, fftw_complex *out) {
     free(mod);
 }
 
-int main() {
+struct MyArgs : public argparse::Args {
+    int &size = kwarg("s,size", "Image height in pixels").set_default(1080);
+    bool &verbose = flag("v,verbose", "A flag to toggle verbose");
+};
+
+int main(int argc, char *argv[]) {
+    auto args = argparse::parse<MyArgs>(argc, argv);
+
+    if (args.verbose) {
+        args.print();
+    }
+}
+
+int main3() {
     int w, h, comp;
 
     unsigned char *image = stbi_load("ph_1cpu_166s.png", &w, &h, &comp, STBI_grey);

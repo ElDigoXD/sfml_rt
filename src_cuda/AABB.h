@@ -10,30 +10,30 @@ public:
     Interval y;
     Interval z;
 
-    [[nodiscard]] __host__ __device__ Interval index(int index) const {
+    [[nodiscard]] GPU Interval index(int index) const {
         if (index == 0) return x;
         if (index == 1) return y;
         return z;
     }
 
-    __host__ __device__ AABB() {};
+    GPU AABB() {};
 
-    __host__ __device__ AABB(const Interval &_x, const Interval &_y, const Interval &_z) : x(_x), y(_y), z(_z) {
+    GPU AABB(const Interval &_x, const Interval &_y, const Interval &_z) : x(_x), y(_y), z(_z) {
     }
 
-    __host__ __device__ AABB(const Point3 &a, const Point3 &b) {
+    GPU AABB(const Point3 &a, const Point3 &b) {
         x = Interval(fmin(a.x, b.x), fmax(a.x, b.x));
         y = Interval(fmin(a.y, b.y), fmax(a.y, b.y));
         z = Interval(fmin(a.z, b.z), fmax(a.z, b.z));
     }
 
-    __host__ __device__ AABB(const AABB &a, const AABB &b) {
+    GPU AABB(const AABB &a, const AABB &b) {
         x = {a.x, b.x};
         y = {a.y, b.y};
         z = {a.z, b.z};
     }
 
-    [[nodiscard]] __host__ __device__ bool hit_0(const Ray &r, Interval ray_t) const {
+    [[nodiscard]] GPU bool hit_0(const Ray &r, Interval ray_t) const {
         for (int i = 0; i < 3; ++i) {
             auto t0 = fmin(
                     (index(i).min_ - r.origin()[i]) / r.direction()[i],
@@ -50,7 +50,7 @@ public:
         return true;
     }
 
-    [[nodiscard]] __host__ __device__ bool hit(const Ray &r, Interval ray_t) const {
+    [[nodiscard]] GPU bool hit(const Ray &r, Interval ray_t) const {
         for (int i = 0; i < 3; i++) {
             const auto invD = 1 / r.direction()[i];
             const auto orig = r.origin()[i];
@@ -73,7 +73,7 @@ public:
         return true;
     }
 
-    __host__ __device__ AABB pad() {
+    GPU AABB pad() {
         auto delta = 0.0001;
         Interval new_x = (x.max_ - x.min_ >= delta) ? x : x.expand(delta);
         Interval new_y = (y.max_ - y.min_ >= delta) ? y : y.expand(delta);

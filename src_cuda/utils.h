@@ -13,6 +13,10 @@
 #include "curand_kernel.h"
 
 #ifdef __CUDACC__
+#define CUDA
+
+#define GPU __host__ __device__
+
 #define CU(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 
 void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
@@ -24,6 +28,9 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
         exit(99);
     }
 }
+
+#else
+#define GPU
 #endif
 constexpr static const double infinity = std::numeric_limits<double>::infinity();
 
@@ -38,7 +45,7 @@ std::string string_format(const std::string &format, Args ... args) {
     return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 }
 
-__host__ __device__ double degrees_to_radians(double degrees) {
+GPU double degrees_to_radians(double degrees) {
     return degrees * std::numbers::pi / 180.0;
 }
 
@@ -78,7 +85,7 @@ namespace Random {
 
     __host__ double _double() { return generate_canonical(); }
 
-    __host__ __device__ double _double(curandState *rand) {
+    GPU double _double(curandState *rand) {
 #ifdef __CUDA_ARCH__
         return -curand_uniform_double(rand) + 1;
 #else
@@ -86,9 +93,7 @@ namespace Random {
 #endif
     }
 
-    __host__ double _double(double min, double max) { return min + (max - min) * _double(); }
-
-    __host__ __device__ double _double(double min, double max, curandState *rand) {
+    GPU double _double(double min, double max, curandState *rand) {
         return min + (max - min) * _double(rand);
     }
 }

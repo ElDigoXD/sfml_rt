@@ -21,77 +21,85 @@ public:
         double e[3]{0, 0, 0};
     };
 
-    __host__ __device__ Vec3() {} // NOLINT(*-pro-type-member-init)
+    GPU Vec3() {} // NOLINT(*-pro-type-member-init)
 
-    __host__ __device__ Vec3(double x, double y, double z) : e{x, y, z} {} // NOLINT(*-pro-type-member-init)
+    GPU Vec3(double x, double y, double z) : e{x, y, z} {} // NOLINT(*-pro-type-member-init)
 
 
-    __host__ __device__ Vec3 operator-() const { return {-x, -y, -z}; }
+    GPU Vec3 operator-() const { return {-x, -y, -z}; }
 
-    __host__ __device__ double operator[](int i) const { return e[i]; }
+    GPU double operator[](int i) const { return e[i]; }
 
-    __host__ __device__ double &operator[](int i) { return e[i]; }
+    GPU double &operator[](int i) { return e[i]; }
 
-    __host__ __device__ Vec3 &operator+=(const Vec3 &other) {
+    GPU Vec3 &operator+=(const Vec3 &other) {
         x += other.x;
         y += other.y;
         z += other.z;
         return *this;
     }
 
-    __host__ __device__ Vec3 &operator*=(double t) {
+    GPU Vec3 &operator*=(double t) {
         x *= t;
         y *= t;
         z *= t;
         return *this;
     }
 
-    __host__ __device__ Vec3 &operator*=(Vec3 b) {
+    GPU Vec3 &operator*=(Vec3 b) {
         x *= b.x;
         y *= b.y;
         z *= b.z;
         return *this;
     }
 
-    __host__ __device__ Vec3 &operator/=(double t) {
+    GPU Vec3 &operator/=(double t) {
         return *this *= 1 / t;
     }
 
-    [[nodiscard]] __host__ __device__ double length() const {
+    [[nodiscard]] GPU double length() const {
         return std::sqrt(length_squared());
     }
 
-    [[nodiscard]] __host__ __device__ double length_squared() const {
+    [[nodiscard]] GPU double length_squared() const {
         return x * x + y * y + z * z;
     }
 
-    [[nodiscard]]__host__ __device__  bool is_near_zero() const {
+    [[nodiscard]]GPU  bool is_near_zero() const {
         return (fabs(x) < 1e-8) && (fabs(y) < 1e-8) && (fabs(z) < 1e-8);
     }
 
-    [[nodiscard]] __host__ __device__ Vec3 clamp(double a, double b) const {
+    [[nodiscard]]GPU  bool is_near_zero(double epsilon) const {
+        return (fabs(x) < epsilon) && (fabs(y) < epsilon) && (fabs(z) < epsilon);
+    }
+
+    [[nodiscard]]GPU  Vec3 abs() const {
+        return {std::abs(x), std::abs(y), std::abs(z)};
+    }
+
+    [[nodiscard]] GPU Vec3 clamp(double a, double b) const {
         Interval i(a, b);
         return {i.clamp(x), i.clamp(y), i.clamp(z)};
     }
 
-    __host__ __device__ static Vec3 random(curandState *rand) {
+    GPU static Vec3 random(curandState *rand) {
         return {Random::_double(rand), Random::_double(rand), Random::_double(rand)};
     }
 
-    __host__ __device__ static Vec3 random(double min, double max, curandState *rand) {
+    GPU static Vec3 random(double min, double max, curandState *rand) {
         return {Random::_double(min, max, rand), Random::_double(min, max, rand), Random::_double(min, max, rand)};
     }
 
-    __host__ __device__ Vec3 normalize();
+    GPU Vec3 normalize();
 };
 
 
 // Utility
-__host__ __device__ Vec3 operator+(const Vec3 &a, const Vec3 &b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
+GPU Vec3 operator+(const Vec3 &a, const Vec3 &b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
 
-__host__ __device__ Vec3 operator-(const Vec3 &a, const Vec3 &b) { return {a.x - b.x, a.y - b.y, a.z - b.z}; }
+GPU Vec3 operator-(const Vec3 &a, const Vec3 &b) { return {a.x - b.x, a.y - b.y, a.z - b.z}; }
 
-__host__ __device__ Vec3 operator*(const Vec3 &a, const Vec3 &b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
+GPU Vec3 operator*(const Vec3 &a, const Vec3 &b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
 
 __host__ __device__ bool operator==(const Vec3 &a, const Vec3 &b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
 
@@ -103,7 +111,7 @@ __host__ __device__ Vec3 operator*(double t, const Vec3 &a) { return a * t; }
 
 __host__ __device__ Vec3 operator/(const Vec3 &a, double t) { return (1 / t) * a; }
 
-__host__ __device__  double dot(const Vec3 &a, const Vec3 &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+__host__ __device__ double dot(const Vec3 &a, const Vec3 &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 __host__ __device__ Vec3 cross(const Vec3 &a, const Vec3 &b) {
     return {a.y * b.z - a.z * b.y,
@@ -123,15 +131,6 @@ __host__ __device__ Vec3 random_in_unit_sphere(curandState *rand) {
     } while (p.length_squared() >= 1);
     return p;
 
-}
-
-__host__ Vec3 random_in_unit_disk() {
-    while (true) {
-        auto p = Vec3{Random::_double(-1, 1), Random::_double(-1, 1), 0};
-        if (p.length_squared() < 1) {
-            return p;
-        }
-    }
 }
 
 __host__ __device__ Vec3 random_in_unit_disk(curandState *rand) {

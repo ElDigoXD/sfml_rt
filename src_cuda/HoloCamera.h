@@ -13,11 +13,11 @@
 #define THREADS 1
 #endif
 
-#ifdef __CUDA_ARCH__
+#ifdef CUDA
 #include <thrust/complex.h>
-typedef thrust::complex<double> complex;
+typedef thrust::complex<double> Complex;
 #else
-typedef std::complex<double> complex;
+typedef std::complex<double> Complex;
 #endif
 
 class HoloCamera {
@@ -46,7 +46,7 @@ public:
     int slm_height_in_px;
 
     // Point cloud screen
-    const int screen_height_in_px = SCREEN_HEIGHT_IN_PX;
+    const int screen_height_in_px;
     const int screen_width_in_px = std::floor(screen_height_in_px * 1.77);
 
     //int slm_width_px = 256;
@@ -77,22 +77,18 @@ public:
         return ptr;
     }
 
-    __host__ __device__ HoloCamera() : HoloCamera(1920, 1080) {}
-
-    __host__ __device__ HoloCamera(int _image_width, int _image_height) :
-            HoloCamera(_image_width, _image_height, 1, 3) {}
-
-    __host__ __device__ HoloCamera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth)
+    GPU HoloCamera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth, int screen_height)
             : slm_width_in_px(_image_width),
               slm_height_in_px(_image_height),
               samples_per_pixel(_samples_per_pixel),
-              max_depth(_max_depth) {
+              max_depth(_max_depth),
+              screen_height_in_px(screen_height){
         update();
     }
 
-    __host__ __device__ void update() { update(slm_width_in_px, slm_height_in_px); }
+    GPU void update() { update(slm_width_in_px, slm_height_in_px); }
 
-    __host__ __device__ void update(int width, int height) {
+    GPU void update(int width, int height) {
         camera_center = Point3(0, 0, slm_z);
 
         // SLM screen
@@ -135,24 +131,24 @@ public:
         slm_pixel_00_location = slm_upper_left + 0.5 * (slm_pixel_delta_x + slm_pixel_delta_y);
     }
 
-    [[nodiscard]] __host__ __device__ Ray get_ray_at_screen(int i, int j) const {
+    [[nodiscard]] GPU Ray get_ray_at_screen(int i, int j) const {
         auto pixel_center = screen_pixel_00_location + (i * screen_pixel_delta_x) + (j * screen_pixel_delta_y);
         auto ray_origin = camera_center;
 
         return Ray(ray_origin, pixel_center - ray_origin);
     }
 
-    [[nodiscard]] __host__ __device__ Vec3 screen_pixel_sample_square(curandState *rand) const {
+    [[nodiscard]] GPU Vec3 screen_pixel_sample_square(curandState *rand) const {
         return (-0.5 + Random::_double(rand)) * screen_pixel_delta_x +
                (-0.5 + Random::_double(rand)) * screen_pixel_delta_y;
     }
 
-    [[nodiscard]] __host__ __device__ Vec3 slm_pixel_sample_square(curandState *rand) const {
+    [[nodiscard]] GPU Vec3 slm_pixel_sample_square(curandState *rand) const {
         return (-0.5 + Random::_double(rand)) * slm_pixel_delta_x +
                (-0.5 + Random::_double(rand)) * slm_pixel_delta_y;
     }
 
-    __host__ __device__ Ray get_random_ray_at_screen(int i, int j, curandState *rand) const {
+    GPU Ray get_random_ray_at_screen(int i, int j, curandState *rand) const {
         auto pixel_center = screen_pixel_00_location + (i * screen_pixel_delta_x) + (j * screen_pixel_delta_y);
         auto ray_origin = camera_center;
 
@@ -184,7 +180,7 @@ public:
     }
 
 
-    __host__ __device__ static Color lerp(Color start, Color end, double a) {
+    GPU static Color lerp(Color start, Color end, double a) {
         return (1 - a) * start + a * end;
     }
 
@@ -201,7 +197,7 @@ public:
     int shinyness = 1000;
 
     void render_CGH_line(
-            complex pixels[], const HittableList &world, const std::vector<Point3> &point_cloud,
+            Complex pixels[], const HittableList &world, const std::vector<Point3> &point_cloud,
             int j) const {
 
         for (int i = 0; i < slm_width_in_px; ++i) {
@@ -209,7 +205,7 @@ public:
 
             for (const auto &point: point_cloud) {
                 auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
-                const complex cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
+                const Complex cgh = ray_wave_cgh(ray, point, max_depth, world, nullptr);
                 pixels[i] += cgh;
             }
             pixels[i] /= (slm_width_in_px * slm_height_in_px * 1.0);
@@ -221,10 +217,10 @@ public:
     }
 
     //https://www.alcf.anl.gov/sites/default/files/2020-01/OpenMP_Jose.pdf
-    void render_CGH(complex pixels[], const HittableList &world,
-                    const std::vector<Point3> &point_cloud_off) const {
+    void render_CGH(Complex pixels[], const HittableList &world,
+                    const std::vector<Point3> &point_cloud) const {
 
-        auto point_cloud = generate_point_cloud(world);
+        //auto point_cloud = generate_point_cloud(world);
 
 #pragma omp parallel for default(none) firstprivate(point_cloud, world) shared(pixels) num_threads(THREADS)
 
@@ -234,7 +230,7 @@ public:
 
                 for (const auto &point: point_cloud) {
                     auto ray = Ray(slm_pixel_center, point - slm_pixel_center);
-                    const complex cgh = ray_wave_cgh(ray, max_depth, world, nullptr);
+                    const Complex cgh = ray_wave_cgh(ray, point, max_depth, world, nullptr);
                     pixels[i + j * slm_width_in_px] += cgh;
                 }
                 pixels[i + j * slm_width_in_px] /= (slm_width_in_px * slm_height_in_px * 1.0);
@@ -246,8 +242,8 @@ public:
         }
     }
 
-    __host__ __device__ complex
-    ray_wave_cgh(const Ray &ray, int depth, const HittableList &world, curandState *rand) const {
+    GPU Complex ray_wave_cgh(const Ray &ray, const Point3 expected_point, int depth, const HittableList &world,
+                             curandState *rand) const {
         HitRecord record;
         Color attenuation;
         Color sky_color = Colors::blue_sky();
@@ -286,10 +282,10 @@ public:
         }
         auto sub_image = (illumination_color).clamp(0, 1);
         auto sub_phase = ((2 * M_PI / wavelength) * po_distance);
-#ifdef __CUDA_ARCH__
-        auto sub_phase_c = thrust::exp(thrust::complex(0.0, 1.0 * sub_phase));
+#ifdef CUDA
+        Complex sub_phase_c = thrust::exp(thrust::complex(0.0, 1.0 * sub_phase));
 #else
-        auto sub_phase_c = std::exp(static_cast<complex>(1.0i * sub_phase));
+        Complex sub_phase_c = std::exp(static_cast<Complex>(1.0i * sub_phase));
 #endif
         auto sub_cgh_ray = (sub_image.r * sub_phase_c);
         return sub_cgh_ray;
