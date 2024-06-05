@@ -3,7 +3,6 @@
 #include "Ray.h"
 #include "hittable/HittableList.h"
 #include "hittable/Hittable.h"
-#include <complex>
 
 class Camera {
 public:
@@ -51,13 +50,13 @@ public:
         return malloc(size);
     }
 
-
-    __host__ void *operator new(size_t len, bool gpu) {
+#ifdef CUDA
+    void *operator new(size_t len, bool gpu) {
         void *ptr;
         cudaMallocManaged(&ptr, len);
         return ptr;
     }
-
+#endif
     GPU Camera() : Camera(600, 400) {}
 
     GPU Camera(int _image_width, int _image_height) : Camera(_image_width, _image_height, 10, 10) {}

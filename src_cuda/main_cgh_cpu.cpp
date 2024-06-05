@@ -5,7 +5,6 @@
 
 #include "Vec3.h"
 #include "Camera.h"
-#include "chrono"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
@@ -61,7 +60,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Rendering a " << image_width << "x" << image_height << " hologram with " << camera.samples_per_pixel
               << " samples per pixel with " << num_threads << " threads.\n";
 
-    camera.print_properties();
+    //camera.print_properties();
 
     auto start = time(nullptr);
 

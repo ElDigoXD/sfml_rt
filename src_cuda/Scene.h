@@ -192,8 +192,8 @@ namespace Scene {
         // d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
         // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
         d_list[0] = new Triangle(Point3(-12, -12, -12 - 6) * mm,
-                                 Point3(+12, -12, -12 - 6) * mm,
                                  Point3(000, +12, -12 - 6) * mm,
+                                 Point3(+12, -12, -12 - 6) * mm,
                                  new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);
@@ -211,8 +211,8 @@ namespace Scene {
         // d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
         // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
         d_list[0] = new Triangle(Point3(-12, -12, -12 - 6) * mm,
-                                 Point3(+12, -12, -12 - 6) * mm,
                                  Point3(000, +12, -12 - 6) * mm,
+                                 Point3(+12, -12, -12 - 6) * mm,
                                  new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);
@@ -416,8 +416,8 @@ namespace CPUScene {
         // d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
         // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
         d_list[0] = new Triangle(Point3(-12, -12, -12 - 6) * mm,
-                                 Point3(+12, -12, -12 - 6) * mm,
                                  Point3(000, +12, -12 - 6) * mm,
+                                 Point3(+12, -12, -12 - 6) * mm,
                                  new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);

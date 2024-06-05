@@ -65,24 +65,24 @@ public:
     Point3 screen_pixel_00_location;
     Point3 slm_pixel_00_location;
 
-
     void *operator new(size_t size) {
         return malloc(size);
     }
 
-
+#ifdef CUDA
     __host__ void *operator new(size_t len, bool gpu) {
         void *ptr;
         cudaMallocManaged(&ptr, len);
         return ptr;
     }
+#endif
 
     GPU HoloCamera(int _image_width, int _image_height, int _samples_per_pixel, int _max_depth, int screen_height)
             : slm_width_in_px(_image_width),
               slm_height_in_px(_image_height),
               samples_per_pixel(_samples_per_pixel),
               max_depth(_max_depth),
-              screen_height_in_px(screen_height){
+              screen_height_in_px(screen_height) {
         update();
     }
 
@@ -234,7 +234,6 @@ public:
                     pixels[i + j * slm_width_in_px] += cgh;
                 }
                 pixels[i + j * slm_width_in_px] /= (slm_width_in_px * slm_height_in_px * 1.0);
-
             }
             if (j % 100 == 0) {
                 std::printf("line %d\n", j);
@@ -295,7 +294,7 @@ public:
 #ifdef CUDA
         Complex sub_phase_c = thrust::exp(thrust::complex(0.0, 1.0 * sub_phase));
 #else
-        Complex sub_phase_c = std::exp(static_cast<Complex>(1.0i * sub_phase));
+        Complex sub_phase_c = std::exp(Complex(0, sub_phase));
 #endif
         auto sub_cgh_ray = (sub_image.r * sub_phase_c);
         return sub_cgh_ray;

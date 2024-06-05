@@ -41,8 +41,9 @@ namespace Obj {
         }
         if (cuda){
 #ifdef __CUDA_ARCH__
-
+#ifdef CUDA
             CU(cudaMallocManaged(out_vertices, sizeof(Vec3) * vertices.size()));
+#endif
 #endif
         } else
             *out_vertices = new Vec3 [vertices.size()];
