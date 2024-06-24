@@ -6,6 +6,9 @@
 
 #include "third-party/tiny_obj_loader.h"
 
+#undef TINYOBJLOADER_IMPLEMENTATION
+
+
 #include "third-party/BS_thread_pool.h"
 #include "cuda.h"
 #include <chrono>

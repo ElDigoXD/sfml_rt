@@ -292,7 +292,7 @@ public:
         auto sub_image = (diffuse * diffuse_intensity + specular * specular_intensity).clamp(0, 1);
         auto sub_phase = ((2 * M_PI / wavelength) * po_distance);
 #ifdef CUDA
-        Complex sub_phase_c = thrust::exp(thrust::complex(0.0, 1.0 * sub_phase));
+        Complex sub_phase_c = thrust::exp(Complex(0.0, sub_phase));
 #else
         Complex sub_phase_c = std::exp(Complex(0, sub_phase));
 #endif

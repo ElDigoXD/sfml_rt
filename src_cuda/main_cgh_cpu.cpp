@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 
     auto point_cloud = camera.generate_point_cloud(*const_world);
 
-#ifndef ENABLE_THREAD_POOL
+#ifndef USE_THREAD_POOL
     camera.render_CGH(pixels_complex, *const_world, point_cloud);
 #else
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};

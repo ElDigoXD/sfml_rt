@@ -8,6 +8,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
 #include "third-party/tiny_obj_loader.h"
+
+#undef TINYOBJLOADER_IMPLEMENTATION
+
 #include <SFML/Graphics.hpp>
 #include <thread>
 
@@ -27,7 +30,7 @@ public:
     unsigned int image_width = 600u;
     unsigned int image_height = 400u;
 
-    sf::RenderWindow window = sf::RenderWindow{{current_width, current_height}, "CMake SFML Project"};
+    sf::RenderWindow window = sf::RenderWindow{{current_width, current_height}, "CPU Raytracer GUI"};
     sf::Sprite sprite;
 
     Camera camera;
@@ -70,7 +73,6 @@ public:
     sf::Vector2i before_click_mouse_position;
     sf::Vector2i before_move_mouse_position;
     bool mouse_pressed = false;
-    std::vector<Hittable *> *triangles = new std::vector<Hittable *>;
 
     GUI() {
         // Imgui variables
@@ -80,7 +82,7 @@ public:
         t_n = 4;
         pool.reset(t_n);
         camera.samples_per_pixel = 10;
-        camera.max_depth = 100;
+        camera.max_depth = 10;
         continuous_render = true;
         enable_camera_movement = true;
         target_samples = 2;
@@ -95,7 +97,8 @@ public:
         //camera.light = {0, 10, 10};
         //camera.light_color = {1, 1, 1};
 
-        world = CPUScene::point_light(camera);
+        world = CPUScene::shuttle(camera);
+        printf("world size: %d\n", world->list_size);
     }
 
     void run() {
@@ -132,27 +135,25 @@ public:
                 } else if (event.type == sf::Event::MouseButtonPressed) {
                     if ((event.mouseButton.button == sf::Mouse::Left
                          || event.mouseButton.button == sf::Mouse::Right)
-                        && enable_camera_movement
-                        && sprite.getGlobalBounds().contains((float) event.mouseButton.x,
-                                                             (float) event.mouseButton.y)
+                        && sprite.getGlobalBounds().contains((float) event.mouseButton.x, (float) event.mouseButton.y)
                         && sf::Mouse::getPosition(window).x < image_width) {
-                        if (is_materials_tab_open) {
-                            /*
-                            auto ray = camera.get_ray_at(sf::Mouse::getPosition(window).x,
-                                                         sf::Mouse::getPosition(window).y);
-                            HitRecord record;
-                            for (const auto &hittable: world.objects) {
-                                if (hittable->hit(ray, Interval{0, INFINITY}, record)) {
-                                    selected_hittable = std::dynamic_pointer_cast<Sphere>(hittable);
-                                }
-                            }
-                            */
-
-                        } else {
+                        if (enable_camera_movement) {
                             mouse_pressed = true;
                             window.setMouseCursorVisible(false);
                             before_click_mouse_position = sf::Mouse::getPosition(window);
                             before_move_mouse_position = before_click_mouse_position;
+                        }
+                        if (is_materials_tab_open) {
+                            auto ray = camera.get_ray_at(sf::Mouse::getPosition(window).x,
+                                                         sf::Mouse::getPosition(window).y);
+                            HitRecord record;
+                            double t_max = INFINITY;
+                            for (int i = 0; i < world->list_size; i++) {
+                                if (world->list[i]->hit(ray, Interval{0, t_max}, record)) {
+                                    selected_hittable = dynamic_cast<Sphere *>(world->list[i]);
+                                    t_max = record.t;
+                                }
+                            }
                         }
                     }
                 } else if (event.type == sf::Event::MouseButtonReleased) {
@@ -334,7 +335,7 @@ public:
     }
 
     bool enable_look_at = false;
-    bool is_materials_tab_open;
+    bool is_materials_tab_open = false;
 
     void imgui(sf::Time dt) {
         ImGui::SFML::Update(window, dt);
@@ -354,6 +355,8 @@ public:
         ImGui::BeginTabBar("tab bar");
 
         if (ImGui::BeginTabItem("Render")) {
+            enable_camera_movement = true;
+
             ImGui::PushItemWidth(-1.0f);
             if (t_state == RENDERING) {
                 if (ImGui::Button("Stop render", {-1, 0})) {
@@ -416,39 +419,36 @@ public:
 
             if (continuous_render) {
                 ImGui::Text("Stop at samples:");
-                if (ImGui::SliderInt("##c", (int *) &target_samples, 1, 10000, "%d",
-                                     ImGuiSliderFlags_Logarithmic)) {
-                    int a = std::floor(std::sqrt(target_samples));
-                    int b = (int) std::pow(a, 2);
-                    int c = (int) std::pow(a + 1, 2);
-                    if (target_samples - b < c - target_samples)
-                        target_samples = b;
-                    else
-                        target_samples = c;
-                }
+                ImGui::SliderInt("##c", (int *) &target_samples, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
             } else {
                 ImGui::Text("Samples per pixel:");
-                if (ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d",
-                                     ImGuiSliderFlags_Logarithmic)) {
-                    int a = std::floor(std::sqrt(camera.samples_per_pixel));
-                    int b = (int) std::pow(a, 2);
-                    int c = (int) std::pow(a + 1, 2);
-                    if (camera.samples_per_pixel - b < c - camera.samples_per_pixel)
-                        camera.samples_per_pixel = b;
-                    else
-                        camera.samples_per_pixel = c;
-                }
+                ImGui::SliderInt("##c", (int *) &camera.samples_per_pixel, 1, 10000, "%d",
+                                 ImGuiSliderFlags_Logarithmic);
             }
 
             ImGui::Text("Ray depth:");
             ImGui::SliderInt("##d", (int *) &camera.max_depth, 1, 10000, "%d", ImGuiSliderFlags_Logarithmic);
 
+            ImGui::Separator();
+
+            auto total_time = t_state == RENDERING
+                              ? render_clock.getElapsedTime().asMilliseconds()
+                              : render_time;
+            ImGui::Text("%dx%d %d samples", image_width, image_height,
+                        continuous_render ? total_samples - 1 : camera.samples_per_pixel);
+            ImGui::Text("ms/sample: %.0f", total_time * 1.0 / total_samples);
+            ImGui::Text("Render: %dms", total_time);
+            if (t_state == RENDERING && continuous_render) {
+                ImGui::Text("Expected: %.0fms", total_time * 1.0 / total_samples * target_samples);
+            }
+
             ImGui::EndTabItem();
             ImGui::PopItemWidth();
         }
         if (ImGui::BeginTabItem("Camera")) {
+            enable_camera_movement = true;
+
             ImGui::PushItemWidth(-1.0f);
-            ImGui::Checkbox("Enable camera movement", &enable_camera_movement);
             ImGui::Text("Fov:");
             if (ImGui::SliderDouble("##e", &camera.vfov, 1, 200)) {
                 camera.update();
@@ -493,20 +493,17 @@ public:
             ImGui::PopItemWidth();
         }
 
-
-        ImGui::Separator();
-
-        if (ImGui::BeginTabItem("gpu")) {
+        if (ImGui::BeginTabItem("Light")) {
+            enable_camera_movement = false;
             ImGui::PushItemWidth(-1.0f);
 
-
-            ImGui::EndTabItem();
-            ImGui::PopItemWidth();
-        }
-
-        is_materials_tab_open = ImGui::BeginTabItem("Materials");
-        if (is_materials_tab_open) {
-            ImGui::PushItemWidth(-1.0f);
+            ImGui::Text("Sky color:");
+            float s_color[3];
+            to_float_array(camera.sky_color, s_color);
+            if (ImGui::ColorEdit3("##sc", s_color)) {
+                camera.sky_color = from_float_array(s_color);
+                start_render();
+            };
 
             ImGui::Text("Light position:");
             if (ImGui::DragDouble3("##lp", camera.light.e, 0.1, -100, 100)) {
@@ -514,10 +511,10 @@ public:
             };
 
             ImGui::Text("Light color:");
-            float mat[3];
-            to_float_array(camera.light_color, mat);
-            if (ImGui::ColorEdit3("##lc", mat)) {
-                camera.light_color = from_float_array(mat);
+            float l_color[3];
+            to_float_array(camera.light_color, l_color);
+            if (ImGui::ColorEdit3("##lc", l_color)) {
+                camera.light_color = from_float_array(l_color);
                 start_render();
             };
 
@@ -531,25 +528,28 @@ public:
                 start_render();
             };
 
+            ImGui::EndTabItem();
+            ImGui::PopItemWidth();
+        }
+
+        is_materials_tab_open = ImGui::BeginTabItem("Materials");
+        if (is_materials_tab_open) {
+            enable_camera_movement = false;
+            ImGui::PushItemWidth(-1.0f);
             if (selected_hittable) {
-                /*
-                if (imgui_mat((selected_hittable->material.get()))) {
+                if (imgui_mat((selected_hittable->material))) {
                     start_render();
                 }
-                 */
             }
 
             ImGui::EndTabItem();
             ImGui::PopItemWidth();
         }
+
         ImGui::EndTabBar();
 
         ImGui::Separator();
-        ImGui::Text("%dx%d %d samples, %4.0ffps", image_width, image_height,
-                    continuous_render ? total_samples - 1 : camera.samples_per_pixel,
-                    1 / dt.asSeconds());
-        ImGui::Text("Render: %dms",
-                    t_state == RENDERING ? render_clock.getElapsedTime().asMilliseconds() : render_time);
+
 
         ImGui::PopStyleColor();
         ImGui::End();
@@ -559,14 +559,21 @@ public:
     bool imgui_mat(T material) {
         auto updated = false;
         if (auto *dielectric = dynamic_cast<Dielectric *>(material)) {
+            ImGui::Text("Refractive index:");
             if (ImGui::SliderDouble("Refraction index", &dielectric->refraction_index, 0.001, 5, "%.3f",
                                     ImGuiSliderFlags_AlwaysClamp)) {
                 updated = true;
             }
+            ImGui::Text("Vacuum/Air: 1");
+            ImGui::Text("Water/Ice:  1.3");
+            ImGui::Text("Glass:      1.5");
+            ImGui::Text("Diamond:    2.4");
         } else if (auto *metal = dynamic_cast<Metal *>(material)) {
+            ImGui::Text("Fuzz:");
             if (ImGui::SliderDouble("Fuzz", &metal->fuzz, 0, 1)) {
                 updated = true;
             }
+            ImGui::Separator();
             float mat[3];
             to_float_array(metal->albedo, mat);
             if (ImGui::ColorPicker3("###pls", mat)) {
@@ -581,6 +588,7 @@ public:
                 updated = true;
             }
         }
+        ImGui::Separator();
         int curr = 0;
         if (ImGui::Combo("Ch", &curr, "Change material\0Lambertian\0Metal\0Dielectric\0Normals\0")) {
             switch (curr) {

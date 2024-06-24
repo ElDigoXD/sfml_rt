@@ -1,5 +1,7 @@
 #pragma once
 #include "utils.h"
+#include "third-party/tiny_obj_loader.h"
+
 namespace Obj {
 
     int get_vertices(Vec3 **out_vertices, bool cuda) {

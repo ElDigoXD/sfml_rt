@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cmath>
+
 #ifdef CUDA
 #include <curand_kernel.h>
 #endif
+
 #include "utils.h"
 #include "Interval.h"
 
@@ -205,6 +207,10 @@ GPU void to_float_array(const Color &color, float *array) {
 
 GPU Color from_float_array(const float *array) {
     return {array[0], array[1], array[2]};
+}
+
+GPU Color from_hex_code(const uint hex_code) {
+    return Color((hex_code >> 16) & 0xFF, (hex_code >> 8) & 0xFF, hex_code & 0xFF) / 255;
 }
 
 namespace Colors {

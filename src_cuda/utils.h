@@ -102,6 +102,7 @@ namespace Random {
 }
 
 #ifdef IS_SFML
+#include "imgui.h"
 namespace ImGui {
     bool SliderDouble(const char *label, double *v, double v_min, double v_max, const char *format = "%.3f",
                       ImGuiSliderFlags flags = 0) {

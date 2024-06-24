@@ -7,6 +7,7 @@
 #include "obj.h"
 #include "hittable/BVHNode.h"
 #include "HoloCamera.h"
+#include "Camera.h"
 
 #ifdef CUDA
 
@@ -43,7 +44,6 @@ namespace Scene {
         d_list[1] = new Sphere(Vec3(0, -100.5, -1), 100, new Lambertian(Vec3(0.8, 0.8, 0.0)));
         d_list[2] = new Sphere(Vec3(1, 0, -1), 0.5, new Metal(Vec3(0.8, 0.6, 0.2), 1));
         d_list[3] = new Sphere(Vec3(-1, 0, -1), 0.5, new Metal(Vec3(0.8, 0.8, 0.8), 0.3));
-
         d_camera.vfov = 20;
         d_camera.update();
 
@@ -429,4 +429,110 @@ namespace CPUScene {
 
         return new HittableList(d_list, 1);
     }
+}
+
+namespace TFGScene {
+    auto blue = from_hex_code(0x26547c);
+    auto magenta = from_hex_code(0xef476f);
+    auto salmon = from_hex_code(0xf78c6b);
+    auto yellow = from_hex_code(0xffd166);
+    auto gold = from_hex_code(0xFFB916);
+    auto teal = from_hex_code(0x06d6a0);
+    auto white = from_hex_code(0xfffcf9);
+
+    HittableList *lambertian(Camera &camera) {
+        auto list = new Hittable *[4];
+
+
+        list[0] = new Sphere(Vec3(0, -99.5, -1), 100, new Lambertian({.99, .99, .99})); // white
+        list[1] = new Sphere(Vec3(-1, 1, -1), 0.5, new Lambertian(from_hex_code(0x89EE95))); // l_green
+        list[2] = new Sphere(Vec3(0, 1, -1), 0.5, new Lambertian({from_hex_code(0x257CFF)})); // l_blue
+        list[3] = new Sphere(Vec3(1, 1, -1), 0.5, new Lambertian(from_hex_code(0xFFBD1E))); // yellow
+
+        camera.vfov = 10;
+        camera.look_from = {0, 5, 10};
+        camera.look_at = {0, 1.3, 0};
+        camera.update();
+        camera.sky_color = Colors::white();
+        return new HittableList(list, 4);
+    }
+
+    HittableList *metal(Camera &camera) {
+        auto list = new Hittable *[4];
+
+
+        list[0] = new Sphere(Vec3(0, -99.5, -1), 100, new Metal(from_hex_code(0x3f3f3f), 0)); // gray
+        list[1] = new Sphere(Vec3(-1, 1, -1), 0.5, new Metal(from_hex_code(0x89EE95), 0.1)); // l_green
+        list[2] = new Sphere(Vec3(0, 1, -1), 0.5, new Metal({from_hex_code(0x257CFF)}, 0)); // l_blue
+        list[3] = new Sphere(Vec3(1, 1, -1), 0.5, new Metal(from_hex_code(0xFFBD1E), 0.5)); // yellow
+
+        camera.vfov = 10;
+        camera.look_from = {0, 5, 10};
+        camera.look_at = {0, 1.3, 0};
+        camera.update();
+        camera.sky_color = Colors::white();
+        return new HittableList(list, 4);
+    }
+
+    HittableList *dielectric(Camera &camera) {
+        auto list = new Hittable *[7];
+
+        list[0] = new Sphere(Vec3(0, -99.5, -1), 100, new Lambertian(from_hex_code(0x9D9D9D))); // l_gray
+        list[1] = new Sphere(Vec3(-1, 1, -1), 0.5, new Dielectric(1.3));
+        list[2] = new Sphere(Vec3(0, 1, -1), 0.5, new Dielectric(1.5));
+        list[3] = new Sphere(Vec3(1, 1, -1), 0.5,  new Dielectric(2.4));
+        list[4] = new Sphere(Vec3(-1, 1, -3), 0.5, new Lambertian(from_hex_code(0x89EE95))); // l_green
+        list[5] = new Sphere(Vec3(0, 1, -3), 0.5, new Lambertian(from_hex_code(0x257CFF))); // l_blue
+        list[6] = new Sphere(Vec3(1, 1, -3), 0.5, new Lambertian(from_hex_code(0xFFBD1E))); // yellow
+        camera.vfov = 1.2;
+        camera.look_from = {0, 16.7, 100};
+        camera.look_at = {0, 1.3, 0};
+        camera.update();
+        camera.sky_color = from_hex_code(0xC2DAFF);
+        return new HittableList(list, 7);
+    }
+
+    HittableList *materials(Camera &camera) {
+        auto list = new Hittable *[7];
+
+        list[0] = new Sphere(Vec3(0, -99.5, -1), 100, new Metal(from_hex_code(0x3f3f3f), 0)); // gray
+        list[1] = new Sphere(Vec3(-1, 1, -1), 0.5, new Dielectric(1.3));
+        list[2] = new Sphere(Vec3(0, 1, -1), 0.5, new Dielectric(1.5));
+        list[3] = new Sphere(Vec3(1, 1, -1), 0.5,  new Dielectric(2.4));
+        list[4] = new Sphere(Vec3(-1, 1, -3), 0.5, new Lambertian(from_hex_code(0x89EE95))); // l_green
+        list[5] = new Sphere(Vec3(0, 1, -3), 0.5, new Metal(from_hex_code(0x257CFF), 0.3)); // l_blue
+        list[6] = new Sphere(Vec3(1, 1, -3), 0.5, new Lambertian(from_hex_code(0xFFBD1E))); // yellow
+        camera.vfov = 1.2;
+        camera.look_from = {0, 16.7, 100};
+        camera.look_at = {0, 1, 0};
+        camera.update();
+        camera.sky_color = from_hex_code(0xC2DAFF);
+        return new HittableList(list, 7);
+    }
+
+    HittableList *light(Camera &camera) {
+        auto list = new Hittable *[4];
+
+
+        list[0] = new Sphere(Vec3(0, -99.5, -1), 100, new Lambertian({.99, .99, .99})); // white
+        list[1] = new Sphere(Vec3(-1, 1, -1), 0.5, new Lambertian(from_hex_code(0x89EE95))); // l_green
+        list[2] = new Sphere(Vec3(0, 1, -1), 0.5, new Lambertian({from_hex_code(0x257CFF)})); // l_blue
+        list[3] = new Sphere(Vec3(1, 1, -1), 0.5, new Lambertian(from_hex_code(0xFFBD1E))); // yellow
+
+        camera.vfov = 10;
+        camera.look_from = {0, 5, 10};
+        camera.look_at = {0, 1.3, 0};
+        camera.update();
+
+        camera.sky_color = Colors::blue_sky();
+        camera.light = Point3(0, 3, -1);
+        camera.light_color = {1, 1, 1};
+        camera.diffuse_intensity = 1;
+        camera.specular_intensity = 1;
+
+
+        return new HittableList(list, 4);
+    }
+
+
 }

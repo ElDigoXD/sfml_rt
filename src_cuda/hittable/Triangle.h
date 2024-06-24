@@ -30,7 +30,7 @@ public:
 
         // Check if the ray and plane are parallel.
         auto n_dot_ray_dir = dot(n, ray.direction());
-        if (n_dot_ray_dir < 1e-8)
+        if (abs(n_dot_ray_dir) < 1e-8)
             return false;
 
         auto d = -dot(n, v[0]);

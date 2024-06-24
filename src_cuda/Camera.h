@@ -216,6 +216,7 @@ public:
 
     Point3 light{0, 0, 0};
     Color light_color{0, 0, 0};
+    Color sky_color = Colors::blue_sky();
     union {
         struct {
             double diffuse_intensity;
@@ -230,7 +231,7 @@ public:
         HitRecord record;
         Color attenuation;
         Color total_point_light_attenuation = Colors::white();
-        Color sky_color = Colors::blue_sky();
+        Color sky_attenuation = sky_color;
         Color diffuse;
         Color specular;
         Color illumination_color{0, 0, 0};
@@ -238,12 +239,6 @@ public:
         int cur_depth = depth;
         Ray scattered_ray;
         bool has_point_light = light != Color{0, 0, 0};
-
-        // Si el rayo escapa en iluminación ambiental, devuelve el color del rayo atenuado (si aplica)
-        // Si el rayo escapa en iluminación puntual, devuelve negro. Si no, también devuelve negro.
-        //   Lo único que hace es decidir si continúa lanzando rayos a la fuente.
-        // Cada rebote debería aplicar la atenuación
-
 
         // While the ray does not escape
         while ((*world)->hit(cur_ray, Interval(0.0000001, infinity), record)) {
@@ -253,14 +248,14 @@ public:
             auto light_ray = Ray(record.p, light - record.p);
 
             if (!record.material->scatter(cur_ray, record, attenuation, scattered_ray, rand)) return {0, 0, 0};
-            sky_color *= attenuation;
+            sky_attenuation *= attenuation;
             total_point_light_attenuation *= attenuation;
 
             if (has_point_light
                 && !(*world)->hit(light_ray)
                 && attenuation != Color{1, 1, 1}) { // Not in shadow
 
-                if (dot(scattered_ray.direction(), record.normal) <= 0) break; // Ray absorbed
+                if (dot(scattered_ray.direction(), record.normal) <= 0) break; // Code not reachable
 
                 if (record.material->is_diffuse()) {
                     diffuse += total_point_light_attenuation * light_color *
@@ -273,7 +268,7 @@ public:
             cur_ray = scattered_ray;
         }
 
-        return (sky_color * sky_intensity + diffuse * diffuse_intensity + specular * specular_intensity).clamp(0, 1);
+        return (sky_attenuation * sky_intensity + diffuse * diffuse_intensity + specular * specular_intensity).clamp(0, 1);
     }
 
     void set_focus_dist(double dist) {
