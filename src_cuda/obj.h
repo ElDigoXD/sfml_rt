@@ -1,6 +1,5 @@
 #pragma once
 #include "utils.h"
-#include "third-party/tiny_obj_loader.h"
 
 namespace Obj {
 

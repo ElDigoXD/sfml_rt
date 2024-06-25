@@ -57,7 +57,6 @@ GPU double degrees_to_radians(double degrees) {
 namespace Random {
 
     static thread_local unsigned int rng_state = std::rand();
-    static curandGenerator_t l_rand;
 
     static unsigned int rand_pcg() {
         unsigned int state = rng_state;
@@ -100,27 +99,3 @@ namespace Random {
         return min + (max - min) * _double(rand);
     }
 }
-
-#ifdef IS_SFML
-#include "imgui.h"
-namespace ImGui {
-    bool SliderDouble(const char *label, double *v, double v_min, double v_max, const char *format = "%.3f",
-                      ImGuiSliderFlags flags = 0) {
-        return SliderScalar(label, ImGuiDataType_Double, v, &v_min, &v_max, format, flags);
-    }
-
-    bool SliderDouble3(const char *label, double v[3], double v_min, double v_max, const char *format = "%.3f",
-                       ImGuiSliderFlags flags = 0) {
-        return SliderScalarN(label, ImGuiDataType_Double, v, 3, &v_min, &v_max, format, flags);
-    }
-
-    bool DragDouble(const char *label, double v[3], float speed, double v_min, double v_max, const char *format = "%.3f",
-                       ImGuiSliderFlags flags = 0) {
-        return DragScalar(label, ImGuiDataType_Double, v, speed, &v_min, &v_max, format, flags);
-    }
-    bool DragDouble3(const char *label, double v[3], float speed, double v_min, double v_max, const char *format = "%.3f",
-                     ImGuiSliderFlags flags = 0) {
-        return DragScalarN(label, ImGuiDataType_Double, v, 3, speed, &v_min, &v_max, format, flags);
-    }
-}
-#endif
