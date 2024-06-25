@@ -15,7 +15,7 @@
                                                                                                                                                                  \
 __global__ void ___##name##_kernel(Hittable **d_list, HittableList **d_world, Camera &d_camera, curandState *d_global_state, int d_list_length);                \
 __host__ void name(Hittable ***d_list, HittableList ***d_world, Camera &d_camera, curandState *d_global_state) {                                               \
-    CU(cudaMalloc(&*d_list, sizeof(Hittable *) * length));                                                                                                       \
+    CU(cudaMalloc(&*d_list, sizeof(Hittable *) * (length)));                                                                                                       \
     CU(cudaMalloc(&*d_world, sizeof(HittableList *)));                                                                                                           \
                                                                                                                                                                  \
     ___##name##_kernel<<<1,1>>>(*d_list, *d_world, d_camera, d_global_state, length);                                                                           \
@@ -24,6 +24,22 @@ __host__ void name(Hittable ***d_list, HittableList ***d_world, Camera &d_camera
                                                                                                                                                                  \
 }                                                                                                                                                                \
 __global__ void ___##name##_kernel(Hittable **d_list, HittableList **d_world, Camera &d_camera,  curandState *d_global_state, int d_list_length) {              \
+    if (threadIdx.x != 0 || blockIdx.x != 0) return;                                                                                                             \
+    auto l_rand = d_global_state;
+
+#define create_holo_scene(name, length)                                                                                                                               \
+                                                                                                                                                                 \
+__global__ void ___##name##_kernel(Hittable **d_list, HittableList **d_world, HoloCamera &d_camera, curandState *d_global_state, int d_list_length);                \
+__host__ void name(Hittable ***d_list, HittableList ***d_world, HoloCamera &d_camera, curandState *d_global_state) {                                               \
+    CU(cudaMalloc(&*d_list, sizeof(Hittable *) * (length)));                                                                                                       \
+    CU(cudaMalloc(&*d_world, sizeof(HittableList *)));                                                                                                           \
+                                                                                                                                                                 \
+    ___##name##_kernel<<<1,1>>>(*d_list, *d_world, d_camera, d_global_state, length);                                                                           \
+    CU(cudaGetLastError());                                                                                                                                      \
+    CU(cudaDeviceSynchronize());                                                                                                                                 \
+                                                                                                                                                                 \
+}                                                                                                                                                                \
+__global__ void ___##name##_kernel(Hittable **d_list, HittableList **d_world, HoloCamera &d_camera,  curandState *d_global_state, int d_list_length) {              \
     if (threadIdx.x != 0 || blockIdx.x != 0) return;                                                                                                             \
     auto l_rand = d_global_state;
 
@@ -167,53 +183,40 @@ namespace Scene {
 
     end_create_scene
 
-    __global__ void
-    ___hologram_kernel(Hittable **d_list, HittableList **d_world, HoloCamera &d_camera, curandState *d_global_state,
-                       int d_list_length);
-
-    __host__ void
-    hologram(Hittable ***d_list, HittableList ***d_world, HoloCamera &d_camera, curandState *d_global_state) {
-        int d_list_length = 1;
-        CU(cudaMalloc(&*d_list, sizeof(Hittable *) * d_list_length));
-        CU(cudaMalloc(&*d_world, sizeof(HittableList *)));
-        ___hologram_kernel<<<1, 1>>>(*d_list, *d_world, d_camera, d_global_state, d_list_length);
-        CU(cudaGetLastError());
-        CU(cudaDeviceSynchronize());
-    }
-
-    __global__ void
-    ___hologram_kernel(Hittable **d_list, HittableList **d_world, HoloCamera &d_camera, curandState *d_global_state,
-                       int d_list_length) {
-        if (threadIdx.x != 0 || blockIdx.x != 0) return;
-        auto l_rand = d_global_state;
+    create_holo_scene(hologram, (2))
         auto mm = 1e-3;
 
         // d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        // d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
+        // d_list[1] = new Sphere(Vec3(1, -0.25, 4) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
         // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        d_list[0] = new Triangle(Point3(-12, -12, -12 - 6) * mm,
-                                 Point3(000, +12, -12 - 6) * mm,
-                                 Point3(+12, -12, -12 - 6) * mm,
+        d_list[0] = new Triangle(Point3(-6, -3, -8) * mm,
+                                 Point3(-6, +3, -8) * mm,
+                                 Point3(+6, -3, -8) * mm,
                                  new Lambertian(Vec3(0.7, 0.3, 0.3)));
+
+        //d_list[0] = new Sphere(Vec3(0,0,-10)*mm, 4*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(5,5,5)*mm, 1*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);
         d_camera.light_color = {1, 0, 0};
         d_camera.diffuse_intensity = 1;
         d_camera.specular_intensity = 0;
 
-        *d_world = new HittableList(d_list, d_list_length);
-    }
+    end_create_scene
 
     HittableList *hologram_cpu(HoloCamera &d_camera) {
         auto mm = 1e-3;
-        auto d_list = new Hittable *[1];
+        auto d_list = new Hittable *[2];
         // d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        // d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
+        // d_list[1] = new Sphere(Vec3(1, -0.25, 4) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
         // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        d_list[0] = new Triangle(Point3(-12, -12, -12 - 6) * mm,
-                                 Point3(000, +12, -12 - 6) * mm,
-                                 Point3(+12, -12, -12 - 6) * mm,
+        d_list[0] = new Triangle(Point3(-6, -3, -8) * mm,
+                                 Point3(-6, +3, -8) * mm,
+                                 Point3(+6, -3, -8) * mm,
                                  new Lambertian(Vec3(0.7, 0.3, 0.3)));
+
+        //d_list[0] = new Sphere(Vec3(0,0,-10)*mm, 4*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(5,5,5)*mm, 1*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);
         d_camera.light_color = {1, 0, 0};
@@ -222,7 +225,7 @@ namespace Scene {
 
         // d_camera.update();
 
-        return new HittableList(d_list, 1);
+        return new HittableList(d_list, 2);
     }
 }
 
