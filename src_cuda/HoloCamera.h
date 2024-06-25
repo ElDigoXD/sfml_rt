@@ -164,6 +164,8 @@ public:
             for (int i = 0; i < screen_width_in_px; ++i) {
 #ifdef ENABLE_RANDOM_SCREEN_RAYS
                 ray = get_random_ray_at_screen(i, j, nullptr);
+                ray = {screen_pixel_00_location + (i * screen_pixel_delta_x) + (j * screen_pixel_delta_y), {0, 0, -1}};
+
 #else
                 ray = get_ray_at_screen(i, j);
 #endif
