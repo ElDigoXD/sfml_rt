@@ -164,7 +164,7 @@ public:
             for (int i = 0; i < screen_width_in_px; ++i) {
 #ifdef ENABLE_RANDOM_SCREEN_RAYS
                 ray = get_random_ray_at_screen(i, j, nullptr);
-                ray = {screen_pixel_00_location + (i * screen_pixel_delta_x) + (j * screen_pixel_delta_y), {0, 0, -1}};
+                //ray = {screen_pixel_00_location + (i * screen_pixel_delta_x) + (j * screen_pixel_delta_y), {0, 0, -1}};
 
 #else
                 ray = get_ray_at_screen(i, j);
@@ -218,7 +218,6 @@ public:
         }
     }
 
-    //https://www.alcf.anl.gov/sites/default/files/2020-01/OpenMP_Jose.pdf
     void render_CGH(Complex pixels[], const HittableList &world,
                     const std::vector<Point3> &point_cloud) const {
 
@@ -237,6 +236,7 @@ public:
                 }
                 pixels[i + j * slm_width_in_px] /= (slm_width_in_px * slm_height_in_px * 1.0);
             }
+
             if (j % 100 == 0) {
                 std::printf("line %d\n", j);
             }
@@ -260,10 +260,10 @@ public:
 
 
         while (world.hit(cur_ray, Interval(0.0000001, infinity), record)) {
-            // Ray does not escape, so it's represented as black
             if (cur_depth == max_depth && !(record.p - expected_point).is_near_zero()) {
                 return 0;
             }
+            // Ray does not escape, so it's represented as black
             if (cur_depth-- <= 0) break;
 
             auto light_ray = Ray(record.p, light - record.p);

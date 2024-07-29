@@ -183,19 +183,12 @@ namespace Scene {
 
     end_create_scene
 
-    create_holo_scene(hologram, (2))
+    create_holo_scene(hologram, (3))
         auto mm = 1e-3;
 
-        // d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        // d_list[1] = new Sphere(Vec3(1, -0.25, 4) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        d_list[0] = new Triangle(Point3(-6, -3, -8) * mm,
-                                 Point3(-6, +3, -8) * mm,
-                                 Point3(+6, -3, -8) * mm,
-                                 new Lambertian(Vec3(0.7, 0.3, 0.3)));
-
-        //d_list[0] = new Sphere(Vec3(0,0,-10)*mm, 4*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        d_list[1] = new Sphere(Vec3(5,5,5)*mm, 1*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);
         d_camera.light_color = {1, 0, 0};
@@ -206,26 +199,19 @@ namespace Scene {
 
     HittableList *hologram_cpu(HoloCamera &d_camera) {
         auto mm = 1e-3;
-        auto d_list = new Hittable *[2];
-        // d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        // d_list[1] = new Sphere(Vec3(1, -0.25, 4) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        d_list[0] = new Triangle(Point3(-6, -3, -8) * mm,
-                                 Point3(-6, +3, -8) * mm,
-                                 Point3(+6, -3, -8) * mm,
-                                 new Lambertian(Vec3(0.7, 0.3, 0.3)));
-
-        //d_list[0] = new Sphere(Vec3(0,0,-10)*mm, 4*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        d_list[1] = new Sphere(Vec3(5,5,5)*mm, 1*mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        auto d_list = new Hittable *[3];
+        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);
         d_camera.light_color = {1, 0, 0};
         d_camera.diffuse_intensity = 1;
-        d_camera.specular_intensity = 1;
+        d_camera.specular_intensity = 0;
 
         // d_camera.update();
 
-        return new HittableList(d_list, 2);
+        return new HittableList(d_list, 3);
     }
 }
 
@@ -398,11 +384,11 @@ namespace CPUScene {
     HittableList *hologram(HoloCamera &d_camera) {
         auto mm = 1e-3;
         auto d_list = new Hittable *[3];
-        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 1.5 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
-        d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 1.0 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
-        d_list[2] = new Sphere(Vec3(0, -9000, 0) * mm, (9000 - 4) * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
+        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(1, -0.25, 4) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
-        d_camera.light = {5, 5, 10};
+        d_camera.light = Point3(5, 5, 10);
         d_camera.light_color = {1, 0, 0};
         d_camera.diffuse_intensity = 1;
         d_camera.specular_intensity = 0;
@@ -414,19 +400,15 @@ namespace CPUScene {
 
     HittableList *hologram_cpu(HoloCamera &d_camera) {
         auto mm = 1e-3;
-        auto d_list = new Hittable *[1];
-        // d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        // d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Metal(Vec3(0.7, 0.3, 0.3), 0.5));
-        // d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
-        d_list[0] = new Triangle(Point3(-12, -12, -12 - 6) * mm,
-                                 Point3(000, +12, -12 - 6) * mm,
-                                 Point3(+12, -12, -12 - 6) * mm,
-                                 new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        auto d_list = new Hittable *[3];
+        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(1, -0.25, 4) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
 
         d_camera.light = Point3(5, 5, 10);
         d_camera.light_color = {1, 0, 0};
         d_camera.diffuse_intensity = 1;
-        d_camera.specular_intensity = 1;
+        d_camera.specular_intensity = 0;
 
         // d_camera.update();
 
@@ -442,6 +424,26 @@ namespace TFGScene {
     auto gold = from_hex_code(0xFFB916);
     auto teal = from_hex_code(0x06d6a0);
     auto white = from_hex_code(0xfffcf9);
+
+    HittableList *example(Camera &camera) {
+        auto list = new Hittable *[3];
+
+
+        list[0] = new Sphere(Vec3(0, 1.4, -1), 0.2, new Lambertian(from_hex_code(0x89EE95))); // l_green
+        list[1] = new Sphere(Vec3(0, 1, -1), 0.3, new Lambertian({from_hex_code(0x257CFF)})); // l_blue
+        list[2] = new Sphere(Vec3(0, 0.5, -1), 0.4, new Lambertian(from_hex_code(0xFFBD1E))); // yellow
+
+        camera.vfov = 10;
+        camera.look_from = {0, 5, 10};
+        camera.look_at = {0, 1.3, 0};
+        camera.update();
+        camera.sky_color = Colors::blue_sky();
+        camera.light = Point3(3, 11, 3);
+        camera.light_color = {1, 1, 1};
+        camera.diffuse_intensity = 1;
+        camera.specular_intensity = 1;
+        return new HittableList(list, 3);
+    }
 
     HittableList *lambertian(Camera &camera) {
         auto list = new Hittable *[4];
@@ -483,7 +485,7 @@ namespace TFGScene {
         list[0] = new Sphere(Vec3(0, -99.5, -1), 100, new Lambertian(from_hex_code(0x9D9D9D))); // l_gray
         list[1] = new Sphere(Vec3(-1, 1, -1), 0.5, new Dielectric(1.3));
         list[2] = new Sphere(Vec3(0, 1, -1), 0.5, new Dielectric(1.5));
-        list[3] = new Sphere(Vec3(1, 1, -1), 0.5,  new Dielectric(2.4));
+        list[3] = new Sphere(Vec3(1, 1, -1), 0.5, new Dielectric(2.4));
         list[4] = new Sphere(Vec3(-1, 1, -3), 0.5, new Lambertian(from_hex_code(0x89EE95))); // l_green
         list[5] = new Sphere(Vec3(0, 1, -3), 0.5, new Lambertian(from_hex_code(0x257CFF))); // l_blue
         list[6] = new Sphere(Vec3(1, 1, -3), 0.5, new Lambertian(from_hex_code(0xFFBD1E))); // yellow
@@ -501,7 +503,7 @@ namespace TFGScene {
         list[0] = new Sphere(Vec3(0, -99.5, -1), 100, new Metal(from_hex_code(0x3f3f3f), 0)); // gray
         list[1] = new Sphere(Vec3(-1, 1, -1), 0.5, new Dielectric(1.3));
         list[2] = new Sphere(Vec3(0, 1, -1), 0.5, new Dielectric(1.5));
-        list[3] = new Sphere(Vec3(1, 1, -1), 0.5,  new Dielectric(2.4));
+        list[3] = new Sphere(Vec3(1, 1, -1), 0.5, new Dielectric(2.4));
         list[4] = new Sphere(Vec3(-1, 1, -3), 0.5, new Lambertian(from_hex_code(0x89EE95))); // l_green
         list[5] = new Sphere(Vec3(0, 1, -3), 0.5, new Metal(from_hex_code(0x257CFF), 0.3)); // l_blue
         list[6] = new Sphere(Vec3(1, 1, -3), 0.5, new Lambertian(from_hex_code(0xFFBD1E))); // yellow
@@ -535,6 +537,43 @@ namespace TFGScene {
 
 
         return new HittableList(list, 4);
+    }
+
+    HittableList *hologram_cgi_scene(Camera &camera) {
+        auto mm = 1e-3;
+        auto d_list = new Hittable *[3];
+        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+
+        camera.light = Point3(5, 5, 10);
+        camera.light_color = {1, 0, 0};
+        camera.sky_intensity = 0;
+        camera.diffuse_intensity = 1;
+        camera.specular_intensity = 0;
+        camera.look_from = Point3(0, 0, 0.200);
+        camera.look_at = Point3(0, 0, 0);
+        camera.vfov = 2;
+        camera.update();
+
+        return new HittableList(d_list, 3);
+
+
+    }
+
+    HittableList *hologram_cgh_scene(HoloCamera &camera) {
+        auto mm = 1e-3;
+        auto d_list = new Hittable *[3];
+        d_list[0] = new Sphere(Vec3(-0.8, 0.25, -12) * mm, 3 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[1] = new Sphere(Vec3(1, -0.25, 0) * mm, 2.0 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+        d_list[2] = new Sphere(Vec3(2, 2, 5) * mm, .5 * mm, new Lambertian(Vec3(0.7, 0.3, 0.3)));
+
+        camera.light = Point3(50, 40, 150)*mm;
+        camera.light_color = {1, 0, 0};
+        camera.diffuse_intensity = 1;
+        camera.specular_intensity = 1;
+
+        return new HittableList(d_list, 3);
     }
 
 

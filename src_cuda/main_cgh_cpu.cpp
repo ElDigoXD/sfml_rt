@@ -1,6 +1,6 @@
-#define THREADS 6
-//#define ENABLE_THREAD_POOL
-#define SCREEN_HEIGHT_IN_PX 10
+#define THREADS 7
+// #define USE_THREAD_POOL
+#define SCREEN_HEIGHT_IN_PX 70
 #define ENABLE_RANDOM_SCREEN_RAYS
 
 #include "Vec3.h"
@@ -21,7 +21,7 @@
 
 #include "cmath"
 
-bool ENABLE_AMPLITUDE = true;
+bool ENABLE_AMPLITUDE = false;
 
 int main(int argc, char *argv[]) {
     int image_width = 1920;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     auto camera = HoloCamera(image_width, image_height, samples_per_pixel, 10, SCREEN_HEIGHT_IN_PX);
 
     HittableList *world;
-    world = CPUScene::hologram_cpu(camera);
+    world = CPUScene::hologram(camera);
 
     const HittableList *const_world = world;
 
@@ -67,7 +67,29 @@ int main(int argc, char *argv[]) {
     auto point_cloud = camera.generate_point_cloud(*const_world);
 
 #ifndef USE_THREAD_POOL
-    camera.render_CGH(pixels_complex, *const_world, point_cloud);
+    //camera.render_CGH(pixels_complex, *const_world, point_cloud);
+    std::vector<std::jthread> threads(THREADS);
+
+    int rows_per_thread = image_height / THREADS;
+
+    for (int thread_idx = 0; thread_idx < THREADS; thread_idx++) {
+        printf("thread %d, from %d to %d\n", thread_idx+1, thread_idx * rows_per_thread,
+               (thread_idx + 1) * rows_per_thread);
+        threads.emplace_back([thread_idx, rows_per_thread, image_width, &pixels_complex, &camera, &const_world, &point_cloud]() {
+            for (int j = thread_idx * rows_per_thread; j < (thread_idx + 1) * rows_per_thread; j++) {
+                camera.render_CGH_line(&pixels_complex[j * image_width], *const_world, point_cloud, j);
+            }
+        });
+    }
+    printf("thread %d, from %d to %d\n", 0, THREADS * rows_per_thread,
+           image_height);
+    for (int j = THREADS * rows_per_thread; j < image_height; j++) {
+        camera.render_CGH_line(&pixels_complex[j * image_width], *const_world, point_cloud, j);
+    }
+    for (auto &thread: threads) {
+        if (thread.joinable())
+            thread.join();
+    }
 #else
     BS::thread_pool pool{static_cast<unsigned int>(num_threads)};
     pool.detach_loop(0, image_height, [&](int j) {
@@ -122,5 +144,6 @@ int main(int argc, char *argv[]) {
 
     }
 
-    return 0;
+    auto command = string_format("python3 ../propagation/main.py %s", filename.c_str());
+    std::system(command.c_str());
 }

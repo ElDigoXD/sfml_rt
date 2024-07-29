@@ -16,6 +16,8 @@ set(CMAKE_CUDA_ARCHITECTURES "native")
 set(USE_NATIVE_ARCH)
 set(CMAKE_CUDA_FLAGS_DEBUG ${CMAKE_CUDA_FLAGS} "-O0")
 set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS} "-O0 -g")
+#set(CMAKE_CXX_FLAGS_RELEASE  ${CMAKE_CXX_FLAGS} "-O3")
+
 
 set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "--expt-relaxed-constexpr -g -Xcompiler -fopenmp -Xcompiler -march=native -Xcompiler --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/12 --diag-suppress 549 --diag-suppress 177")
 
